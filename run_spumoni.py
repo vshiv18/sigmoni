@@ -134,6 +134,31 @@ def run_moni(reads, bins, refname = 'ref.fa', readname = 'reads.fa', evdt=None):
     # proc.call(['moni', 'ms', '-i', rev_ref, '-p', readname, '-o', 
     #                 os.path.splitext(readname)[0] + '_to_' + os.path.splitext(rev_ref)[0]])
 
+def parse_ms(fname, names=None):
+    if names:
+        return {n : np.fromstring(x, dtype=int, sep=' ') for n, (_, x) in zip(open(names, 'r').read().splitlines(), 
+                                                                    SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')))}
+    return {i : np.fromstring(x, dtype=int, sep=' ') for i, x in SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))}
+    
+def compare_ms_docs(real_ms = 'reads', min_pml = 4, max_doc = 8, MS=True):
+    suffix = '.lengths' if MS else '.pseudo_lengths'
+    realfname = real_ms + suffix
+    docfname = real_ms + '.doc_numbers'
+    pred = {}
+    pmls = parse_ms(realfname)
+    docs = parse_ms(docfname)
+    for read in docs.keys():
+        d = docs[read]
+        pml = pmls[read]
+        # m = pml.max()
+        if np.count_nonzero(pml > min_pml) == 0:
+            pred[read] = 0
+            continue
+        relevant_docs = d[pml > min_pml]
+        curpred = np.array([np.count_nonzero(relevant_docs == x) for x in range(max_doc)]) / len(relevant_docs)
+        pred[read] = curpred.argmax() + 1
+    return pred
+    
 
 def compare_ms(real_ms = 'reads', null_ms = 'reads_rev', names = None, 
             metric=lambda x,y: ks_2samp(x,y, alternative='less')[0], MS=True):
@@ -141,14 +166,10 @@ def compare_ms(real_ms = 'reads', null_ms = 'reads_rev', names = None,
     realfname = real_ms + suffix
     revfname = null_ms + suffix
     ks = {}
-    if names:
-        forward = parse_ms(realfname, names)
-        reverse = parse_ms(revfname, names)
-    else:
-        forward = parse_ms_noname(realfname)
-        reverse = parse_ms_noname(revfname)
+    forward = parse_ms(realfname, names)
+    reverse = parse_ms(revfname, names)
     numargs = len(signature(metric).parameters)
-    for read in set(forward.keys()).intersection(set(reverse.keys())):
+    for read in tqdm(list(set(forward.keys()).intersection(set(reverse.keys())))):
         f = forward[read]
         r = reverse[read]
         if numargs == 1:
@@ -157,25 +178,6 @@ def compare_ms(real_ms = 'reads', null_ms = 'reads_rev', names = None,
             ks[read] = metric(f,r)
     return ks, forward, reverse
 
-def parse_ms(fname, names):
-    ms = {}
-    names = open(names, 'r').read().splitlines()
-    with open(fname, 'r') as file:
-        lines = file.read().splitlines()
-        for idx in range(0, len(lines), 2):
-            ms_vals = np.array([int(x) for x in lines[idx+1].split()])
-            ms[names[idx // 2]] = ms_vals
-    return ms
-
-def parse_ms_noname(fname):
-    ms = {}
-    with open(fname, 'r') as file:
-        lines = file.read().splitlines()
-        for idx in range(0, len(lines), 2):
-            rid = lines[idx][1:]
-            ms_vals = np.array([int(x) for x in lines[idx+1].split()])
-            ms[rid] = ms_vals
-    return ms
 
 def get_acc(readA, readB, namesA=None, namesB=None, MS=False,
             metric=lambda x,y: ks_2samp(x,y, alternative='less')[0]):
