@@ -15,7 +15,6 @@ def rev_reads(reads):
     for r in reads:
         r.signal = r.signal[::-1]
         yield r
-#unc.Fast5Reader("/scratch4/blangme2/vshiv/yeast_v_bacteria/fast5s/yeast/")
 
 def normalize_signal(current, poremodel, scale=None, shift=None):
     # takes in a df poremodel, use poremodel.normalize to use poremodel object
@@ -116,3 +115,15 @@ def int_to_alpha(seq):
 #     if pattern.match(str(chr(i))): 
 #         whitespace.append(i)
 
+
+conf_alt = unc.Config()
+conf_alt.event_detector.window_length1 = 3
+conf_alt.event_detector.window_length2 = 6
+conf_alt.event_detector.threshold1 = 4.30265
+conf_alt.event_detector.threshold2 = 2.57058
+conf_alt.event_detector.peak_height = 1.0
+SIGMAP_EVDT = unc.EventDetector(conf_alt.event_detector)
+
+model_6mer = pd.read_csv('poremodel/template_median68pA.model', 
+             sep='\t').loc[:,['kmer','level_mean','level_stdv']].rename(columns={'level_mean':'mean','level_stdv':'stdv'})
+model_6mer = unc.PoreModel(df = model_6mer)

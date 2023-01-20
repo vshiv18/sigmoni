@@ -26,11 +26,11 @@ def write_ref(seq, bins, fname, header=False, reverse=False):
             if header:
                 f.write('>%s_rev\n'%name)
             f.write(''.join(charseq)[::-1]+'\n')
-def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False):
+def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, normalize=True):
     # normalize to model, event detect, convert to deltas, bin, and write to file
     reads = []
     for sig in tqdm(sig_gen):
-        binseq = bins.bin_signal(sig.signal, evdt=evdt)
+        binseq = bins.bin_signal(sig.signal, evdt=evdt, normalize=normalize)
         charseq = ''.join(int_to_sym(binseq))
         reads.append((sig.id, charseq))
     with open(fname, 'w') as f:
@@ -85,8 +85,9 @@ def write_spumoni_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, nor
 def build_spumoni(ref, bins, out_fname='ref.fa', spumoni_path='spumoni'):
     write_spumoni_ref(ref, bins, out_fname)   
     proc.call([spumoni_path, 'build', '-r', out_fname, '-M', '-P', '-n', '-g'])
-    
-def run_spumoni(reads, bins, MS = True, refname = 'ref.fa', readname = 'reads.fa', evdt=None, spumoni_path='spumoni', normalize=True, out=None):
+
+
+def run_spumoni_general(reads, bins, MS = True, refname = 'ref.fa', readname = 'reads.fa', evdt=None, spumoni_path='spumoni', normalize=True, out=None):
     reversename = os.path.splitext(readname)[0] + '_rev' + os.path.splitext(readname)[1]
     if not os.path.exists(readname) and not os.path.exists(reversename):
         write_spumoni_read(reads, bins, evdt, readname, reverse=True, normalize=normalize)
@@ -104,6 +105,24 @@ def run_spumoni(reads, bins, MS = True, refname = 'ref.fa', readname = 'reads.fa
     else:
         proc.call([spumoni_path, 'run', '-r', refname, '-p', readname, '-P', '-n', '-g'])
         proc.call([spumoni_path, 'run', '-r', refname, '-p', reversename, '-P', '-n', '-g'])
+
+def run_spumoni(reads, bins, MS = False, refname = 'ref.fa', readname = 'reads.fa', evdt=None, 
+                spumoni_path='spumoni', normalize=True, reverse=False, threads=1, docs=True):
+    if reverse:
+        reversename = os.path.splitext(readname)[0] + '_rev' + os.path.splitext(readname)[1]
+        if not os.path.exists(readname) and not os.path.exists(reversename):
+            write_read(reads, bins, evdt, fname=readname, reverse=True, normalize=normalize)
+    else:
+        if not os.path.exists(readname):
+            write_read(reads, bins, evdt, fname=readname, reverse=False, normalize=normalize)
+    
+    flags = ['-n']
+    flags += ['-M'] if MS else ['-P']
+    flags += ['-d'] if docs else []
+    command = [spumoni_path, 'run', '-t', str(threads), '-r', refname, '-p']
+    print('Command: ' + ' '.join(command + [readname] + flags))
+    proc.call(command + [readname] + flags)
+    proc.call(command + [reversename] + flags)
     
 def build_moni(ref, bins, out_fname = 'ref.fa'):
     write_ref(ref, bins, out_fname, header=True, reverse=False)

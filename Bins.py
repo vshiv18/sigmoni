@@ -77,65 +77,100 @@ class Bin:
             signal = signal[(signal <= self.bounds[0]) | (signal >= self.bounds[1])]
         
         return np.searchsorted(self.starts, signal)
-        # return [bisect.bisect_left(self.starts, curr) for curr in signal]
 
     def bin_sequence(self, seq):
         sig = seq_to_sig(self.poremodel, seq)
-        # k = self.poremodel.K
-        # bins = []
-        # for x in range(len(seq) - k + 1):
-        #     if any([seq[c] not in 'ACGT' for c in range(x, x + k)]):
-        #         continue
-        #     pa = float(self.poremodel[[seq[x : x + k]]])
-        #     if self.bounds:
-        #         if (pa > self.bounds[0]) and (pa < self.bounds[1]):
-        #             continue 
-        # print('converted to bins')
         if self.bounds:
             sig = sig[(sig <= self.bounds[0]) | (sig >= self.bounds[1])]
         
         return np.searchsorted(self.starts, sig)
-        # bins = [bisect.bisect_left(self.starts, pa) for pa in tqdm(sig)]
-        # return bins
 
     
+# class HPCBin_slow(Bin):
+#     def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False) -> None:
+#         super(HPCBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
+#     def bin_signal(self, signal, evdt=None, normalize=True):
+#         return self._hpc(super(HPCBin, self).bin_signal(signal, evdt=evdt, normalize=normalize))
+#     def _hpc(self, binseq):
+#         return binseq[np.insert((np.where(np.diff(binseq) != 0)[0] + 1), 0, 0)]
+#     def bin_sequence(self, seq):
+#         return self._hpc(super(HPCBin, self).bin_sequence(seq))
+#     def write_bin_sequence(self, seq, fname = 'ref.bins', revcomp = True):
+#         k = self.poremodel.K
+#         f = open(fname, 'wb')
+#         if not os.path.exists(seq + '.pac'):
+#             proc.call(['uncalled', 'index', seq, '--no-bwt'])
+#         idx = unc.load_index(self.poremodel.K, seq, load_bwt=False)
+#         print('loaded seq index')
+#         for sid, length in idx.get_seqs():
+#             kmers = np.array(idx.get_kmers(sid, 0, length))
+#             kmers = kmers[kmers < 4**k]
+#             bins = self.kmer_to_bin[kmers]
+#             bins = self._hpc(bins)
+#             # pack bins and write to file
+#             charseq = bins + 3 # offset so min bin is 3 (0,1,2 are protected chars)
+#             assert charseq.max() < 256
+#             byteseq = charseq.astype('=B').tobytes()
+#             f.write(byteseq)
+#             if revcomp:
+#                 revcomp_kmers = np.apply_along_axis(self.poremodel.kmer_revcomp, 0, kmers[::-1])
+#                 kmers = revcomp_kmers
+#                 bins = self.kmer_to_bin[kmers]
+#                 bins = self._hpc(bins)
+#                 # pack bins and write to file
+#                 charseq = bins + 3 # offset so min bin is 3 (0,1,2 are protected chars)
+#                 assert charseq.max() < 256
+#                 byteseq = charseq.astype('=B').tobytes()
+#                 f.write(byteseq)
+#         f.close()
+
 class HPCBin(Bin):
     def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False) -> None:
-        super(HPCBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
-    def bin_signal(self, signal, evdt=None, normalize=True):
-        return self._hpc(super(HPCBin, self).bin_signal(signal, evdt=evdt, normalize=normalize))
+        if type(poremodel) == unc.pore_model.PoreModel:
+            self.poremodel = poremodel
+        else:
+            self.poremodel = unc.PoreModel(df = poremodel)
+        self.bounds = bounds
+        self.nbins = nbins
+        self.clip = clip
+        if clip:
+            self.clipbounds = (self.poremodel['mean'].min(), self.poremodel['mean'].max())
+        self.minc, self.maxc = self.poremodel['mean'].min(), self.poremodel['mean'].max()  
+        self.space = (self.maxc - self.minc) / self.nbins
+        self.nbins += 1
+        self.kmer_to_bin = self.signal_to_binseq(self.poremodel.means)
+        self.binmodel = [(np.mean(self.poremodel.means[np.where(self.kmer_to_bin == idx)[0]]), 
+                                    np.mean(self.poremodel.stdvs[np.where(self.kmer_to_bin == idx)[0]]))
+                                    for idx in range(self.nbins)]
+    def _preprocess(self, signal, evdt=None, normalize=True):
+        if evdt:
+            signal = np.array(evdt.get_means(signal))
+        if normalize:   
+            signal, _, _ = normalize_signal(signal, self.poremodel)
+        return signal
     def _hpc(self, binseq):
         return binseq[np.insert((np.where(np.diff(binseq) != 0)[0] + 1), 0, 0)]
+    def signal_to_binseq(self, sig):
+        return np.clip(np.floor((sig - self.minc - 1e-10) / self.space) + 1, 0, self.nbins - 1).astype(int)
+    def bin_signal(self, signal, evdt=None, normalize=True):
+        signal = np.array(signal)
+        signal = self._preprocess(signal, evdt=evdt, normalize=normalize)
+        if self.clip:
+            signal = signal[(signal >= self.clipbounds[0]) & (signal <= self.clipbounds[1])]
+        if self.bounds:
+            signal = signal[(signal <= self.bounds[0]) | (signal >= self.bounds[1])]
+        return self._hpc(self.signal_to_binseq(signal))
     def bin_sequence(self, seq):
-        return self._hpc(super(HPCBin, self).bin_sequence(seq))
-    def write_bin_sequence(self, seq, fname = 'ref.bins', revcomp = True):
-        k = self.poremodel.K
-        f = open(fname, 'wb')
-        if not os.path.exists(seq + '.pac'):
-            proc.call(['uncalled', 'index', seq, '--no-bwt'])
-        idx = unc.load_index(self.poremodel.K, seq, load_bwt=False)
-        print('loaded seq index')
-        for sid, length in idx.get_seqs():
-            kmers = np.array(idx.get_kmers(sid, 0, length))
-            kmers = kmers[kmers < 4**k]
-            bins = self.kmer_to_bin[kmers]
-            bins = self._hpc(bins)
-            # pack bins and write to file
-            charseq = bins + 3 # offset so min bin is 3 (0,1,2 are protected chars)
-            assert charseq.max() < 256
-            byteseq = charseq.astype('=B').tobytes()
-            f.write(byteseq)
-            if revcomp:
-                revcomp_kmers = np.apply_along_axis(self.poremodel.kmer_revcomp, 0, kmers[::-1])
-                kmers = revcomp_kmers
-                bins = self.kmer_to_bin[kmers]
-                bins = self._hpc(bins)
-                # pack bins and write to file
-                charseq = bins + 3 # offset so min bin is 3 (0,1,2 are protected chars)
-                assert charseq.max() < 256
-                byteseq = charseq.astype('=B').tobytes()
-                f.write(byteseq)
-        f.close()
+        sig = seq_to_sig(self.poremodel, seq)
+        if self.bounds:
+            sig = sig[(sig <= self.bounds[0]) | (sig >= self.bounds[1])]
+        return self._hpc(self.signal_to_binseq(sig))
+    def viz_bins(self):
+        fig, ax = plt.subplots()
+        sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
+        for idx in range(self.nbins - 1):
+            ax.axvline(self.minc + (idx * self.space))
+        return ax
 
 
 class DeltaBin(Bin):
