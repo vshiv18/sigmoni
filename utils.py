@@ -124,6 +124,6 @@ conf_alt.event_detector.threshold2 = 2.57058
 conf_alt.event_detector.peak_height = 1.0
 SIGMAP_EVDT = unc.EventDetector(conf_alt.event_detector)
 
-model_6mer = pd.read_csv('poremodel/template_median68pA.model', 
+model_6mer = pd.read_csv(os.path.join(os.path.dirname(__file__),'poremodel/template_median68pA.model'), 
              sep='\t').loc[:,['kmer','level_mean','level_stdv']].rename(columns={'level_mean':'mean','level_stdv':'stdv'})
 model_6mer = unc.PoreModel(df = model_6mer)
