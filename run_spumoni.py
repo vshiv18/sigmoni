@@ -179,23 +179,30 @@ def compare_ms_docs(real_ms = 'reads', min_pml = 4, max_doc = 8, MS=True):
     return pred
     
 
-def compare_ms(real_ms = 'reads', null_ms = 'reads_rev', names = None, 
+def compare_ms(real_ms = 'reads', null_ms = None, names = None, 
             metric=lambda x,y: ks_2samp(x,y, alternative='less')[0], MS=True):
-    suffix = '.lengths' if MS else '.pseudo_lengths'
-    realfname = real_ms + suffix
-    revfname = null_ms + suffix
-    ks = {}
-    forward = parse_ms(realfname, names)
-    reverse = parse_ms(revfname, names)
-    numargs = len(signature(metric).parameters)
-    for read in tqdm(list(set(forward.keys()).intersection(set(reverse.keys())))):
-        f = forward[read]
-        r = reverse[read]
-        if numargs == 1:
+    def compare_ms_forward():
+        for read in tqdm(forward.keys()):
+            f = forward[read]
             ks[read] = metric(f)
-        else:
+        return ks, forward, None
+    def compare_ms_reverse():
+        assert null_ms, 'null distribution required!'
+        revfname = null_ms + suffix
+        reverse = parse_ms(revfname, names)
+        for read in tqdm(list(set(forward.keys()).intersection(set(reverse.keys())))):
+            f = forward[read]
+            r = reverse[read]
             ks[read] = metric(f,r)
-    return ks, forward, reverse
+        return ks, forward, reverse
+    
+    suffix = '.lengths' if MS else '.pseudo_lengths'
+    ks = {}
+    realfname = real_ms + suffix
+    forward = parse_ms(realfname, names)
+    
+    numargs = len(signature(metric).parameters)
+    return compare_ms_forward() if numargs == 1 else compare_ms_reverse()
 
 
 def get_acc(readA, readB, namesA=None, namesB=None, MS=False,
