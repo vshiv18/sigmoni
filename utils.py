@@ -70,6 +70,20 @@ def seq_to_sig(poremodel, seq):
         return sig
     return np.array([float(poremodel[[seq[x : x + k]]]) for x in range(len(seq) - k + 1)])
 
+def seq_to_kmer(poremodel, seq):
+    k = poremodel.K
+    if os.path.exists(seq):
+        if not os.path.exists(seq + '.pac'):
+            proc.call(['uncalled', 'index', seq, '--no-bwt'])
+        idx = unc.load_index(k, seq, load_bwt=False)
+        print('loaded seq index')
+        kmers = np.concatenate([idx.get_kmers(sid, 0, length) 
+                        for sid, length in idx.get_seqs()])
+        # remove any non canonical kmers
+        kmers = kmers[kmers < 4**k]
+        return kmers
+    return np.array([seq[x : x + k] for x in range(len(seq) - k + 1)])
+
 def almost_perfect_reads(seq, poremodel):
     k = poremodel.K
     sig = []

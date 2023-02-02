@@ -137,7 +137,6 @@ class HPCBin(Bin):
             self.clipbounds = (self.poremodel['mean'].min(), self.poremodel['mean'].max())
         self.minc, self.maxc = self.poremodel['mean'].min(), self.poremodel['mean'].max()  
         self.space = (self.maxc - self.minc) / self.nbins
-        self.nbins += 1
         self.kmer_to_bin = self.signal_to_binseq(self.poremodel.means)
         self.binmodel = [(np.mean(self.poremodel.means[np.where(self.kmer_to_bin == idx)[0]]), 
                                     np.mean(self.poremodel.stdvs[np.where(self.kmer_to_bin == idx)[0]]))
@@ -151,7 +150,7 @@ class HPCBin(Bin):
     def _hpc(self, binseq):
         return binseq[np.insert((np.where(np.diff(binseq) != 0)[0] + 1), 0, 0)]
     def signal_to_binseq(self, sig):
-        return np.clip(np.floor((sig - self.minc - 1e-10) / self.space) + 1, 0, self.nbins - 1).astype(int)
+        return np.clip(np.floor((sig - self.minc - 1e-10) / self.space), 0, self.nbins - 1).astype(int)
     def bin_signal(self, signal, evdt=None, normalize=True):
         signal = np.array(signal)
         signal = self._preprocess(signal, evdt=evdt, normalize=normalize)
@@ -161,10 +160,8 @@ class HPCBin(Bin):
             signal = signal[(signal <= self.bounds[0]) | (signal >= self.bounds[1])]
         return self._hpc(self.signal_to_binseq(signal))
     def bin_sequence(self, seq):
-        sig = seq_to_sig(self.poremodel, seq)
-        if self.bounds:
-            sig = sig[(sig <= self.bounds[0]) | (sig >= self.bounds[1])]
-        return self._hpc(self.signal_to_binseq(sig))
+        kmers = seq_to_kmer(self.poremodel, seq)
+        return self._hpc(self.kmer_to_bin[kmers])
     def viz_bins(self):
         fig, ax = plt.subplots()
         sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
