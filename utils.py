@@ -20,9 +20,11 @@ def normalize_signal(current, poremodel, scale=None, shift=None):
     # takes in a df poremodel, use poremodel.normalize to use poremodel object
     if scale and shift:
         return (current * scale) + shift, scale, shift
-    poremodel = poremodel.to_df()
-    mean = np.mean(poremodel['mean'])
-    std = np.std(poremodel['mean'])
+    # poremodel = poremodel.to_df()
+    # mean = np.mean(poremodel['mean'])
+    # std = np.std(poremodel['mean'])
+    mean = poremodel.model_mean
+    std = poremodel.model_stdv
     scale = std / np.std(current)
     shift = mean - scale * np.mean(current)
     scaled = (current * scale) + shift
@@ -112,7 +114,7 @@ def model_deltas(poremodel):
 
 _LOWER = "abcdefghijklmnopqrstuvwxyz"
 _UPPER = "ACTGBDEFHIJKLMNOPQRSUVWXYZ"
-_SYMBOLS = "~`!#$%^&*()-_=[{]}\|';:\"/?.,<" # no > + or @ because of fasta and fastq
+_SYMBOLS = "~`!#%^&*()-_=[{]}\|';:\"/?.,<" # no > + or @ because of fasta and fastq
 # _SYMBOLS = "!#$%&'()*,-./:;<=?[\]^_{|}~" # no > + or @ because of fasta and fastq
 _CHARS = _UPPER + _LOWER + _SYMBOLS
 def int_to_sym(seq):

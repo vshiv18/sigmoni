@@ -165,7 +165,7 @@ class HPCBin(Bin):
     def viz_bins(self):
         fig, ax = plt.subplots()
         sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
-        for idx in range(self.nbins - 1):
+        for idx in range(1, self.nbins):
             ax.axvline(self.minc + (idx * self.space))
         return ax
 

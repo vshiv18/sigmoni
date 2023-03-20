@@ -9,9 +9,12 @@ import glob, shutil
 from sklearn.metrics import precision_recall_curve, roc_curve, auc
 from sklearn.metrics import confusion_matrix
 from inspect import signature
+import itertools
 
 
 def write_ref(seq, bins, fname, header=False, reverse=False):
+    if not os.path.isdir(os.path.dirname(fname)):
+        os.makedirs(os.path.dirname(fname))
     print('converting to signal and binning')
     binseq = bins.bin_sequence(seq)
     print('converting to character sequence')
@@ -153,11 +156,14 @@ def run_moni(reads, bins, refname = 'ref.fa', readname = 'reads.fa', evdt=None):
     # proc.call(['moni', 'ms', '-i', rev_ref, '-p', readname, '-o', 
     #                 os.path.splitext(readname)[0] + '_to_' + os.path.splitext(rev_ref)[0]])
 
-def parse_ms(fname, names=None):
+def parse_ms(fname, names=None, nreads=None):
+    if nreads:
+        read_gen = itertools.islice(SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')), nreads)
+    else:
+        read_gen = SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))
     if names:
-        return {n : np.fromstring(x, dtype=int, sep=' ') for n, (_, x) in zip(open(names, 'r').read().splitlines(), 
-                                                                    SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')))}
-    return {i : np.fromstring(x, dtype=int, sep=' ') for i, x in SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))}
+        return {n : np.fromstring(x, dtype=int, sep=' ') for n, (_, x) in zip(open(names, 'r').read().splitlines(), read_gen)}
+    return {i : np.fromstring(x, dtype=int, sep=' ') for i, x in read_gen}
     
 def compare_ms_docs(real_ms = 'reads', min_pml = 4, max_doc = 8, MS=True):
     suffix = '.lengths' if MS else '.pseudo_lengths'
