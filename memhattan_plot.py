@@ -197,7 +197,7 @@ class ResultsVisualizer():
         return '*'
 
     ############ MEMHattan Plot ############
-    def memhattan_smoothed(self, read, annotation, get_read_data, pred=None, smooth=int(1e5), dpi=None, line=False, weightfunc=lambda m, w:w*m, ax=None, **kwargs):
+    def memhattan_smoothed(self, read, annotation, get_read_data, pred=None, smooth=int(1e5), dpi=None, line=False, density=True, weightfunc=lambda m, w:w*m, ax=None, **kwargs):
         if ax == None:
             fig, ax = plt.subplots()
             axis = False
@@ -236,11 +236,11 @@ class ResultsVisualizer():
         # Or plot a smoothed histogram
         elif line:
             assert smooth > 0, 'line plot only for smoothed bins!'
-            hist, edges = np.histogram(offset, bins=bins, weights=weightfunc(m, weight), density=True)
+            hist, edges = np.histogram(offset, bins=bins, weights=weightfunc(m, weight), density=density)
             bincenter = 0.5 * (edges[1:] + edges[:-1])
             ax.plot(bincenter, hist, **kwargs)
         else:
-            p = ax.hist(offset, weights=weightfunc(m, weight), bins=bins, density=True)
+            p = ax.hist(offset, weights=weightfunc(m, weight), bins=bins, density=density)
         
         # mark sigmap and uncalled prediction positions
         maxmem = 1.02
@@ -257,7 +257,10 @@ class ResultsVisualizer():
             sigpred = self.id_to_species[pred[read]]
             ax.add_patch(Rectangle((self.genome_ranges[sigpred][0], 0), self.genome_ranges[sigpred][1] - self.genome_ranges[sigpred][0], 1, fill=False, edgecolor='crimson', lw=1, clip_on=False, transform=trans))
         
-        ax.set_ylabel('density')
+        if density:
+            ax.set_ylabel('density')
+        else:
+            ax.set_ylabel('metric')
         ax.set_xlabel('unc = *, sigmap = ^ ')
         # ax.set_title(read)
         if dpi and not axis:
