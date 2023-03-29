@@ -63,8 +63,7 @@ class Bin:
 
     def _preprocess(self, signal, evdt=None, normalize=True):
         if evdt:
-            events = evdt.get_events(signal)
-            signal = np.array([curr.mean for curr in events])
+            signal = np.array(evdt.get_means(signal))
         if normalize:   
             signal, _, _ = normalize_signal(signal, self.poremodel)
         return signal
@@ -141,12 +140,6 @@ class HPCBin(Bin):
         self.binmodel = [(np.mean(self.poremodel.means[np.where(self.kmer_to_bin == idx)[0]]), 
                                     np.mean(self.poremodel.stdvs[np.where(self.kmer_to_bin == idx)[0]]))
                                     for idx in range(self.nbins)]
-    def _preprocess(self, signal, evdt=None, normalize=True):
-        if evdt:
-            signal = np.array(evdt.get_means(signal))
-        if normalize:   
-            signal, _, _ = normalize_signal(signal, self.poremodel)
-        return signal
     def _hpc(self, binseq):
         return binseq[np.insert((np.where(np.diff(binseq) != 0)[0] + 1), 0, 0)]
     def signal_to_binseq(self, sig):
