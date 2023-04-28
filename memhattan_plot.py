@@ -12,6 +12,7 @@ from lempel_ziv_complexity import lempel_ziv_complexity
 from matplotlib.patches import Rectangle
 from sklearn.metrics import precision_recall_fscore_support
 
+import subprocess as proc
 # sequence complexity metrics
 
 def calc_entropy(s):
@@ -20,9 +21,11 @@ def calc_entropy(s):
     return entropy(counts)        
 
 def delta(seq):
+    if seq == '':
+        return 0
     def cardinality(seq, k):
         return len(set([seq[i:i + k] for i in range(len(seq) - k + 1)]))
-    return np.max([cardinality(seq, k) / k for k in range(1, len(seq))])
+    return np.max([cardinality(seq, k) / k for k in range(1, len(seq) + 1)])
 
 def parse_fasta(fname):
     with open(fname,'r') as f:
@@ -84,9 +87,13 @@ def get_all_read_data(r, parser, func, read_dict, pointer_to_species, filter=15)
 
 
 class ResultsVisualizer():
-    def __init__(self, ref_path, unc_path=None, sigmap_path=None, mm_path=None):
+    def __init__(self, ref_path, unc_path=None, sigmap_path=None, mm_path=None, genomes_path=None):
         # ref_path must include */hpc_tracking.npz metadata + filelist.txt
-        self.path = ref_path
+        self.filelist = ref_path
+        self.path = os.path.dirname(ref_path)
+        self.genomes_path = genomes_path if genomes_path else '/home/vshivak1/scratch4-blangme2/vshiv/yeast_v_bacteria/refs/individual_genomes/'
+        if type(self.genomes_path) == str:
+            self.genomes_path = [self.genomes_path]
         self.load_metadata()
         self.unc_path = unc_path if unc_path else '/data/blangme2/vshiv/sigmoni_data/paper_comparison/seven_bac_yeast_all_reads/comp_all_reads/unc1/all_zymo_reads.paf'
         self.sigmap_path = sigmap_path if sigmap_path else '/data/blangme2/vshiv/sigmoni_data/paper_comparison/seven_bac_yeast_all_reads/comp_all_reads/sigmap/all_zymo_reads.paf'
@@ -95,20 +102,35 @@ class ResultsVisualizer():
         self.load_uncalled_sigmap()
         
     def path_to_ref(self, s):
-        return os.path.basename(s).replace('_complete_genome', '')
+        return os.path.basename(s).split('_complete_genome')[0]
     def load_metadata(self):
         # Load the document list from filelist.txt
-        species = os.path.join(self.path, 'filelist.txt')
-        self.id_to_species = {int(x.split()[1]) : os.path.basename(x.split()[0]).replace('_complete_genome.fasta','') for x in open(species, 'r').read().splitlines()}
-        self.species_to_id = {os.path.basename(x.split()[0]).replace('_complete_genome.fasta','') : int(x.split()[1]) for x in open(species, 'r').read().splitlines()}
-        refs = [os.path.splitext(row.split()[0])[0] for row in open(species, 'r').read().splitlines()]
+        self.id_to_species = {int(x.split()[1]) : self.path_to_ref(x.split()[0]) for x in open(self.filelist, 'r').read().splitlines()}
+        self.species_to_id = {self.path_to_ref(x.split()[0]) : int(x.split()[1]) for x in open(self.filelist, 'r').read().splitlines()}
+        refs = [os.path.splitext(row.split()[0])[0] for row in open(self.filelist, 'r').read().splitlines()]
         
         self.ids = sorted(list(self.species_to_id.values()))
+
+        # Get offsets of each contig within a genome (for plotting)
+        genomes = [path + f for path in self.genomes_path for f in os.listdir(path) if f.endswith('.fasta')]
+        self.contig_offsets = {}
+        for g in genomes:
+            sp = self.path_to_ref(g)
+            if not os.path.exists(g + '.fai'):
+                proc.call(['samtools', 'faidx', g])
+            with open(g + '.fai', 'r') as faidx:
+                data = [(row.split()[0], int(row.split()[1])) for row in faidx.read().splitlines()] 
+                contigs, lens = map(list, list(zip(*data)))
+            lens = np.cumsum([0] + lens)[:-1]
+            for c, l in zip(contigs, lens):
+                self.contig_offsets[c] = l
+                
         # Load the HPC information to map compressed position to run position
-        self.posmap = {self.path_to_ref(r) : np.array(np.load(r + '.hpc_tracking.npz')['pos']) for r in refs}
-        self.rlmap = {self.path_to_ref(r) : np.array(np.load(r + '.hpc_tracking.npz')['run_len']) for r in refs}
+        self.posmap = {self.path_to_ref(r) : np.array(np.load(r + '.hpc_tracking.npz')['pos']) for r in tqdm(refs)}
+        self.rlmap = {self.path_to_ref(r) : np.array(np.load(r + '.hpc_tracking.npz')['run_len']) for r in tqdm(refs)}
         self.all_rls = np.concatenate([self.rlmap[self.id_to_species[i]] for i in self.ids])
         self.all_pos = np.cumsum(np.append(0, self.all_rls))[:-1]
+        print('loaded HPC mappings')
         # Build map of doc -> start/end coords (in bin coords)
         self.genome_ranges = {self.id_to_species[1] : 0}
         cur = 0
@@ -121,24 +143,15 @@ class ResultsVisualizer():
         # Build map of SA positions (after HPC)
         self.sa_ranges = {self.id_to_species[1] : 0}
         cur = 0
-        for f in open(species, 'r').read().splitlines():
+        for f in open(self.filelist, 'r').read().splitlines():
             f, idx = f.split()
-            s = open(f, 'r').read().splitlines()[1]
-            self.sa_ranges[self.id_to_species[int(idx)]] = (cur, cur + len(s))
-            cur += len(s)
+            if not os.path.exists(f + '.fai'):
+                proc.call(['samtools', 'faidx', f])
+            with open(f + '.fai', 'r') as faidx:
+                length = sum([int(row.split()[1]) for row in faidx.read().splitlines()])
+                self.sa_ranges[self.id_to_species[int(idx)]] = (cur, cur + length)
+                cur += length
 
-        # Get offsets of each contig within a genome (for plotting)
-        gdir = '/home/vshivak1/scratch4-blangme2/vshiv/yeast_v_bacteria/refs/individual_genomes/'
-        genomes = [gdir + f for f in os.listdir(gdir) if f.endswith('.fasta')]
-        self.contig_offsets = {}
-        for g in genomes:
-            sp = os.path.basename(g).replace('_complete_genome.fasta', '')
-            seqs = list(SeqIO.parse(g,'fasta'))
-            contigs = [s.id for s in seqs]
-            lens = [len((s.seq)) for s in seqs]
-            lens = np.cumsum([0] + lens)[:-1]
-            for c, l in zip(contigs, lens):
-                self.contig_offsets[c] = l
     def load_uncalled_sigmap(self):
         # Parse uncalled and sigmap output
         uncalled = pd.read_csv(self.unc_path, sep='\t', usecols=[0, 4, 5, 7], header=None)

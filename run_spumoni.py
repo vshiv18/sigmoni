@@ -12,7 +12,7 @@ from inspect import signature
 import itertools
 
 
-def write_ref(seq, bins, fname, header=False, reverse=False):
+def write_ref(seq, bins, fname, header=False, reverse=False, terminator=True):
     if not os.path.isdir(os.path.dirname(fname)):
         os.makedirs(os.path.dirname(fname))
     print('converting to signal and binning')
@@ -32,14 +32,20 @@ def write_ref(seq, bins, fname, header=False, reverse=False):
 def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, normalize=True):
     # normalize to model, event detect, convert to deltas, bin, and write to file
     reads = []
+    null_reads = []
     for sig in tqdm(sig_gen):
         binseq = bins.bin_signal(sig.signal, evdt=evdt, normalize=normalize)
-        charseq = ''.join(int_to_sym(binseq))
-        reads.append((sig.id, charseq))
+        if len(binseq) == 0:
+            null_reads.append(sig.id)
+        else:
+            charseq = ''.join(int_to_sym(binseq))
+            reads.append((sig.id, charseq))
     with open(fname, 'w') as f:
         for readid, r in reads:
             f.write('>%s\n'%readid)
             f.write(r+'\n')
+    with open(fname + '.null', 'w') as f:
+        f.write('\n'.join(null_reads))
     if reverse:
         with open(os.path.splitext(fname)[0] + '_rev' + os.path.splitext(fname)[1], 'w') as f:
             for readid, r in reads:
