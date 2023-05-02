@@ -2,7 +2,6 @@ from sigmoni import utils
 from sigmoni import run_spumoni as sig
 from sigmoni.Bins import *
 from sigmoni.shred_docs import shred
-from sigmoni.build_reference import build_reference
 
 import argparse
 import os, sys
@@ -19,7 +18,6 @@ def parse_arguments():
     output path
     threads
     ref prefix
-    read prefix
 
     Ref args:
     shred size
@@ -27,7 +25,7 @@ def parse_arguments():
     '''
 
     parser = argparse.ArgumentParser(description="Maps and classifies nanopore signal against a positive and negative database")
-
+    # Required args
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-pl', dest='pos_filelist', help='list of positive ref fasta files')
     group.add_argument('-p', dest='pos_filelist', nargs='+', help='positive reference fasta file(s)')
@@ -35,8 +33,6 @@ def parse_arguments():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-nl', dest='null_filelist', help='list of null ref fasta files')
     group.add_argument('-n', dest='null_filelist', nargs='+', help='null reference fasta file(s)')
-    # Required args
-    parser.add_argument('-i', dest='fast5', help='path to input fast5 directory (searches recursively)', required=True)
     
     parser.add_argument(("-b", '--nbins'), dest='nbins', default=6, type=int, help="Number of bins to discretize signal")
     # ref build args
@@ -47,7 +43,6 @@ def parse_arguments():
     parser.add_argument("--spumoni-path", dest='spumoni_path', default='spumoni', help="alternate path to spumoni installation (by default uses PATH variable)")
     parser.add_argument("-o", default='./', dest="output_path", help="output path and working directory")
     parser.add_argument("-t", default=1, dest="threads", help="number of threads", type=int)
-    parser.add_argument("--read-prefix", dest="read_prefix", help="read output prefix", default='reads')
     parser.add_argument("--ref-prefix", dest="ref_prefix", help="reference output prefix", default='ref')
     args = parser.parse_args()
     return args
@@ -59,27 +54,41 @@ def format_args(args):
         args.null_filelist = open(args.null_filelist, 'r').read().splitlines()
     args.bins = HPCBin(nbins=args.nbins, poremodel=model_6mer, clip=False)
 
-def main(args):
+def build_reference(args):
     '''
     Build the reference index by shredding the input 
     sequences, binning, and building the r-index
     '''
-    print('Building reference')
-    build_reference(args)
-    print('Querying reads')
-    query_reads(args)
+    pos_shreds = shred(args, args.pos_filelist)
+    null_shreds = shred(args, args.null_filelist)
 
-def query_reads(args):
-    seq_signal = unc.Fast5Reader(args.fast5)
-    readfile = os.path.join(args.output_path, 'refs', args.ref_prefix + '.fa')
-    if not os.path.exists(readfile):
-        sig.write_read(seq_signal, args.bins, evdt=utils.SIGMAP_EVDT, fname=readfile, reverse=False)
-    else:
-        print('Using binned query found in: %s'%readfile)
+    pos_docs = _bin_reference(args, pos_shreds)
+    null_docs = _bin_reference(args, null_shreds)
+    docs = pos_docs + null_docs
+    filelist = os.path.join(args.output_path, 'refs', 'filelist.txt')
+    with open(filelist,'w') as docarray:
+        docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(docs, range(1, len(docs) + 1))])
+        docarray.write(docs)
 
-    proc.call([args.spumoni_path, 'run', '-t', args.threads, '-r', os.path.join(args.output_path, 'refs', args.ref_prefix), '-p', readfile, '-P', '-n', '-d'])
+    proc.call([args.spumoni_path, 'build', '-i', filelist, '-o', os.path.join(args.output_path, 'refs', args.ref_prefix), '-P', '-n', '-d', '--no-rev-comp'])
+
+    args.bins.save_bins(os.path.join(args.output_path, 'refs', 'bins'))
+
+def _bin_reference(args, dir):
+    # can accept either a directory path or a list of files paths
+    files = [f for f in os.listdir(dir) if f.endswith('.fasta')] if type(dir) == str else dir
+    docs = []
+    outdir = os.path.join(args.output_path, 'refs/')
+    os.makedirs(outdir, exist_ok=True)
+    for ref in files:
+        print(os.path.join(dir, ref))
+        sig.write_ref(os.path.join(dir, ref), args.bins, os.path.join(outdir, ref), header=True)
+        docs.append(os.path.join(outdir, ref))
+    docs = sorted(docs, key=lambda fname: (os.path.splitext(fname)[0].split('_')[0], int(os.path.splitext(fname)[0].split('_')[1])))
+    return docs
+
 
 if __name__ == '__main__':
     args = parse_arguments()
     format_args(args)
-    main()
+    build_reference(args)

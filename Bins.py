@@ -5,6 +5,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from pomegranate import *
 import subprocess as proc
+import pickle
 
 from .utils import *
 
@@ -161,6 +162,14 @@ class HPCBin(Bin):
         for idx in range(1, self.nbins):
             ax.axvline(self.minc + (idx * self.space))
         return ax
+    def save_bins(self, fname):
+        # save the defining variables
+        pickle.dump((self.nbins, self.poremodel), open(fname, 'wb'))
+    @classmethod
+    def from_pickle(fname):
+        nbins, poremodel  = pickle.load(open(fname, 'rb'))
+        return HPCBin(nbins=nbins, poremodel=poremodel)
+    
 
 
 class DeltaBin(Bin):
