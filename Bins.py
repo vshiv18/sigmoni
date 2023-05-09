@@ -153,8 +153,14 @@ class HPCBin(Bin):
         if self.bounds:
             signal = signal[(signal <= self.bounds[0]) | (signal >= self.bounds[1])]
         return self._hpc(self.signal_to_binseq(signal))
-    def bin_sequence(self, seq):
-        kmers = seq_to_kmer(self.poremodel, seq)
+    def bin_sequence(self, seq, revcomp=False, shred_size=0):
+        kmers = seq_to_kmer(self.poremodel, seq, revcomp=revcomp)
+        if shred_size > 0:
+            shreds = []
+            for idx in range(0, len(kmers), shred_size):
+                shred = kmers[idx:idx+shred_size]
+                shreds.append(self._hpc(self.kmer_to_bin[shred]))
+            return shreds
         return self._hpc(self.kmer_to_bin[kmers])
     def viz_bins(self):
         fig, ax = plt.subplots()

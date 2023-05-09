@@ -72,17 +72,19 @@ def seq_to_sig(poremodel, seq):
         return sig
     return np.array([float(poremodel[[seq[x : x + k]]]) for x in range(len(seq) - k + 1)])
 
-def seq_to_kmer(poremodel, seq):
+def seq_to_kmer(poremodel, seq, revcomp=False):
     k = poremodel.K
     if os.path.exists(seq):
         if not os.path.exists(seq + '.pac'):
-            proc.call(['uncalled', 'index', seq, '--no-bwt'])
+            proc.call(['uncalled', 'index', seq, '--no-bwt'], stdout=proc.DEVNULL, stderr=proc.DEVNULL)
         idx = unc.load_index(k, seq, load_bwt=False)
-        print('loaded seq index')
+        # print('loaded seq index')
         kmers = np.concatenate([idx.get_kmers(sid, 0, length) 
                         for sid, length in idx.get_seqs()])
         # remove any non canonical kmers
         kmers = kmers[kmers < 4**k]
+        if revcomp:
+            kmers = poremodel.kmer_revcomp(kmers)[::-1]
         return kmers
     return np.array([seq[x : x + k] for x in range(len(seq) - k + 1)])
 
@@ -117,9 +119,15 @@ _UPPER = "ACTGBDEFHIJKLMNOPQRSUVWXYZ"
 _SYMBOLS = "~`!#%^&*()-_=[{]}\|';:\"/?.,<" # no > + or @ because of fasta and fastq
 # _SYMBOLS = "!#$%&'()*,-./:;<=?[\]^_{|}~" # no > + or @ because of fasta and fastq
 _CHARS = _UPPER + _LOWER + _SYMBOLS
+_CHARS = np.array(list(_CHARS))
 def int_to_sym(seq):
-    if max(seq) < len(_CHARS):
-        return [_CHARS[s] for s in seq]
+    # if max(seq) < len(_CHARS):
+    #     return [_CHARS[s] for s in seq]
+    try:
+        return _CHARS[seq]
+    except IndexError:
+        raise IndexError('Number of bins must be < %d'%(len(_CHARS)))
+
 def int_to_alpha(seq):
     if max(seq) < len(_UPPER):
         return [_UPPER[s] for s in seq]

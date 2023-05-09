@@ -34,9 +34,9 @@ def parse_arguments():
     group.add_argument('-nl', dest='null_filelist', help='list of null ref fasta files')
     group.add_argument('-n', dest='null_filelist', nargs='+', help='null reference fasta file(s)')
     
-    parser.add_argument(("-b", '--nbins'), dest='nbins', default=6, type=int, help="Number of bins to discretize signal")
+    parser.add_argument("-b", '--nbins', dest='nbins', default=6, type=int, help="Number of bins to discretize signal")
     # ref build args
-    parser.add_argument("--shred", dest='shred_size', default=int(1e5), type=int, help="Size of shredded documents, i.e. resolution of mapping, in bp")
+    parser.add_argument("--shred", dest='shred_size', default=int(1e5), type=int, help="Size of shredded documents, i.e. resolution of mapping, in bp. Choose 0 for no shredding")
     parser.add_argument("--no-rev-comp", action="store_false", default=True, dest="rev_comp", help="Do not map reads to the reverse complement of references")
 
     # options args
@@ -49,9 +49,10 @@ def parse_arguments():
 
 def format_args(args):
     if type(args.pos_filelist) == str:
-        args.pos_filelist = open(args.pos_filelist, 'r').read().splitlines()
+        args.pos_filelist = list(map(os.path.abspath, open(args.pos_filelist, 'r').read().splitlines()))
     if type(args.null_filelist) == str:
-        args.null_filelist = open(args.null_filelist, 'r').read().splitlines()
+        args.null_filelist = list(map(os.path.abspath, open(args.null_filelist, 'r').read().splitlines()))
+    args.output_path = os.path.abspath(args.output_path)
     args.bins = HPCBin(nbins=args.nbins, poremodel=model_6mer, clip=False)
 
 def build_reference(args):
@@ -59,11 +60,15 @@ def build_reference(args):
     Build the reference index by shredding the input 
     sequences, binning, and building the r-index
     '''
-    pos_shreds = shred(args, args.pos_filelist)
-    null_shreds = shred(args, args.null_filelist)
-
-    pos_docs = _bin_reference(args, pos_shreds)
-    null_docs = _bin_reference(args, null_shreds)
+    ###############################################
+    # old seperate shredding code
+    # pos_shreds = shred(args, args.pos_filelist)
+    # null_shreds = shred(args, args.null_filelist)
+    # pos_docs = _bin_reference(args, pos_shreds)
+    # null_docs = _bin_reference(args, null_shreds)
+    ###############################################
+    pos_docs = _bin_reference(args, args.pos_filelist)
+    null_docs = _bin_reference(args, args.null_filelist)
     docs = pos_docs + null_docs
     filelist = os.path.join(args.output_path, 'refs', 'filelist.txt')
     with open(filelist,'w') as docarray:
@@ -74,17 +79,29 @@ def build_reference(args):
 
     args.bins.save_bins(os.path.join(args.output_path, 'refs', 'bins'))
 
-def _bin_reference(args, dir):
+def _bin_reference(args, files):
     # can accept either a directory path or a list of files paths
-    files = [f for f in os.listdir(dir) if f.endswith('.fasta')] if type(dir) == str else dir
-    docs = []
     outdir = os.path.join(args.output_path, 'refs/')
     os.makedirs(outdir, exist_ok=True)
-    for ref in files:
-        print(os.path.join(dir, ref))
-        sig.write_ref(os.path.join(dir, ref), args.bins, os.path.join(outdir, ref), header=True)
-        docs.append(os.path.join(outdir, ref))
-    docs = sorted(docs, key=lambda fname: (os.path.splitext(fname)[0].split('_')[0], int(os.path.splitext(fname)[0].split('_')[1])))
+    docs = []
+    for ref in tqdm(files):
+        out_fname = os.path.join(outdir, os.path.basename(ref))
+        docs += sig.write_shredded_ref(ref, args.bins, out_fname, header=True, revcomp=args.rev_comp, shred_size=args.shred_size)
+    sortorder = []
+    for fname in docs:
+        fname = os.path.basename(fname)
+        rc = True if fname.endswith('_rc.fasta') else False
+        if rc:
+            fname = fname[:-3]
+        sortorder.append((1 if rc else 0,
+                        fname.split('_')[0], 
+                        int(os.path.splitext(fname)[0].split('_')[-1]) * (-1 if rc else 1)))
+    docs = [doc for _, doc in sorted(zip(sortorder, docs))]
+    # docs = [docs[idx] for idx, _ in sorted(enumerate(sortorder), key=lambda _, a: a)]
+    # docs = sorted(enumerate(docs, key=lambda fname: 
+    #               (os.path.splitext(fname)[0].split('_')[0], 
+    #                1 if fname.endswith('_rc.fasta') else 0, 
+    #                int(os.path.splitext(fname)[0].split('_')[1])))
     return docs
 
 

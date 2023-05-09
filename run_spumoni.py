@@ -12,23 +12,70 @@ from inspect import signature
 import itertools
 
 
-def write_ref(seq, bins, fname, header=False, reverse=False, terminator=True):
+def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
     if not os.path.isdir(os.path.dirname(fname)):
         os.makedirs(os.path.dirname(fname))
-    print('converting to signal and binning')
+    # print('converting to signal and binning')
     binseq = bins.bin_sequence(seq)
-    print('converting to character sequence')
+    # print('converting to character sequence')
     charseq = int_to_sym(binseq)
+    if terminator:
+        charseq = np.append(charseq, '$')
     name = os.path.splitext(fname)[0]
     with open(fname, 'w') as f:
         if header:
             f.write('>%s\n'%name)
         f.write(''.join(charseq))
-    if reverse:
-        with open(os.path.splitext(fname)[0] + '_rev' + os.path.splitext(fname)[1], 'w') as f:
+    if revcomp:
+        binseq = bins.bin_sequence(seq, revcomp=True)
+        # print('converting to character sequence')
+        charseq = int_to_sym(binseq)
+        if terminator:
+            charseq = np.append(charseq, '$')
+        with open(os.path.splitext(fname)[0] + '_rc' + os.path.splitext(fname)[1], 'w') as f:
             if header:
-                f.write('>%s_rev\n'%name)
-            f.write(''.join(charseq)[::-1]+'\n')
+                f.write('>%s_rc\n'%name)
+            f.write(''.join(charseq)+'\n')
+
+def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size=0, terminator=True):
+    if shred_size == 0:
+        write_ref(seq, bins, fname, header=header, revcomp=revcomp, terminator=terminator)
+        return [fname]
+    if not os.path.isdir(os.path.dirname(fname)):
+        os.makedirs(os.path.dirname(fname))
+    docs = []
+    # print('converting to signal and binning')
+    binseq = bins.bin_sequence(seq, shred_size=shred_size)
+    print(len(binseq))
+    # print('converting to character sequence')
+    count = 0
+    for shred in binseq:
+        charseq = int_to_sym(shred)
+        if terminator:
+            charseq = np.append(charseq, '$')
+        outfname = os.path.splitext(fname)[0] + '_%d'%(count) + os.path.splitext(fname)[1]
+        with open(outfname, 'w') as f:
+            if header:
+                f.write('>%s\n'%(os.path.splitext(outfname)[0]))
+            f.write(''.join(charseq))
+        docs.append(outfname)
+        count += 1
+    if revcomp:
+        count -= 1
+        binseq = bins.bin_sequence(seq, revcomp=True, shred_size=shred_size)
+        for shred in binseq:
+            charseq = int_to_sym(shred)
+            if terminator:
+                charseq = np.append(charseq, '$')
+            outfname = os.path.splitext(fname)[0] + '_%d_rc'%(count) + os.path.splitext(fname)[1]
+            with open(outfname, 'w') as f:
+                if header:
+                    f.write('>%s\n'%(os.path.splitext(outfname)[0]))
+                f.write(''.join(charseq))
+            docs.append(outfname)
+            count -= 1
+    return docs
+
 def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, normalize=True):
     # normalize to model, event detect, convert to deltas, bin, and write to file
     reads = []
