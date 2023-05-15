@@ -5,12 +5,12 @@ from scipy.stats import ks_2samp
 from matplotlib import pyplot as plt
 import seaborn as sns
 from tqdm.auto import tqdm
-import glob, shutil
+import shutil
 from sklearn.metrics import precision_recall_curve, roc_curve, auc
 from sklearn.metrics import confusion_matrix
 from inspect import signature
 import itertools
-
+import multiprocess
 
 def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
     if not os.path.isdir(os.path.dirname(fname)):
@@ -98,6 +98,32 @@ def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, normalize=T
             for readid, r in reads:
                 f.write('>%s\n'%readid)
                 f.write(r[::-1]+'\n')
+
+def write_read_parallel(sig_gen, bins, evdt, fname='reads.fa', normalize=True, threads=1):
+    def signal_gen(sig_gen):
+        for s in sig_gen:
+            yield (s.id, s.signal)
+    def bin_read(sig):
+        binseq = bins.bin_signal(sig[1], evdt=evdt, normalize=normalize)
+        charseq = ''.join(int_to_sym(binseq))
+        return (sig[0], charseq)
+    # normalize to model, event detect, convert to deltas, bin, and write to file
+    if threads == 1:
+        write_read(sig_gen, bins, evdt, fname=fname, reverse=False, normalize=normalize)
+        return
+    pool = multiprocess.Pool(threads)
+    reads = tqdm(pool.imap_unordered(bin_read, signal_gen(sig_gen), chunksize=1000))
+    pool.close()
+    null_reads = []
+    with open(fname, 'w') as f:
+        for readid, r in reads:
+            if len(r) == 0:
+                null_reads.append(readid)
+            else:
+                f.write('>%s\n'%readid)
+                f.write(r+'\n')    
+    with open(fname + '.null', 'w') as f:
+        f.write('\n'.join(null_reads))
 
 def write_spumoni_ref(seq, bins, fname='reads.fa'):
     print('converting to signal and binning')

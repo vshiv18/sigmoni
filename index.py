@@ -1,9 +1,11 @@
 from sigmoni import utils 
 from sigmoni import run_spumoni as sig
-from sigmoni.Bins import *
+from sigmoni.Bins import HPCBin
 from sigmoni.shred_docs import shred
-
+import subprocess as proc
+import uncalled as unc
 import argparse
+from tqdm.auto import tqdm
 import os, sys
 
 def parse_arguments():
@@ -53,7 +55,7 @@ def format_args(args):
     if type(args.null_filelist) == str:
         args.null_filelist = list(map(os.path.abspath, open(args.null_filelist, 'r').read().splitlines()))
     args.output_path = os.path.abspath(args.output_path)
-    args.bins = HPCBin(nbins=args.nbins, poremodel=model_6mer, clip=False)
+    args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
 
 def build_reference(args):
     '''
@@ -75,7 +77,7 @@ def build_reference(args):
         docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(docs, range(1, len(docs) + 1))])
         docarray.write(docs)
 
-    proc.call([args.spumoni_path, 'build', '-i', filelist, '-o', os.path.join(args.output_path, 'refs', args.ref_prefix), '-P', '-n', '-d', '--no-rev-comp'])
+    proc.call([args.spumoni_path, 'build', '-i', filelist, '-o', os.path.join(args.output_path, 'refs', args.ref_prefix), '-P', '-n', '-d', '--no-rev-comp', '-p', '110'])
 
     args.bins.save_bins(os.path.join(args.output_path, 'refs', 'bins'))
 
@@ -87,12 +89,14 @@ def _bin_reference(args, files):
     for ref in tqdm(files):
         out_fname = os.path.join(outdir, os.path.basename(ref))
         docs += sig.write_shredded_ref(ref, args.bins, out_fname, header=True, revcomp=args.rev_comp, shred_size=args.shred_size)
+    # docs = [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith('.fasta')]
     sortorder = []
     for fname in docs:
         fname = os.path.basename(fname)
+        print(fname)
         rc = True if fname.endswith('_rc.fasta') else False
         if rc:
-            fname = fname[:-3]
+            fname = fname.replace('_rc', '')
         sortorder.append((1 if rc else 0,
                         fname.split('_')[0], 
                         int(os.path.splitext(fname)[0].split('_')[-1]) * (-1 if rc else 1)))

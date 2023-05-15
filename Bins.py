@@ -3,14 +3,14 @@ import pandas as pd
 import uncalled as unc
 import seaborn as sns
 from matplotlib import pyplot as plt
-from pomegranate import *
+from pomegranate import NormalDistribution, HiddenMarkovModel
 import subprocess as proc
 import pickle
 
 from .utils import *
 
 class Bin:
-    def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), 
+    def __init__(self, nbins=64, poremodel=model_6mer, 
                 fixed=True, bounds=None, clip=True) -> None:
         if type(poremodel) == unc.pore_model.PoreModel:
             self.poremodel = poremodel
@@ -87,7 +87,7 @@ class Bin:
 
     
 # class HPCBin_slow(Bin):
-#     def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False) -> None:
+#     def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=False) -> None:
 #         super(HPCBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
 #     def bin_signal(self, signal, evdt=None, normalize=True):
 #         return self._hpc(super(HPCBin, self).bin_signal(signal, evdt=evdt, normalize=normalize))
@@ -125,7 +125,7 @@ class Bin:
 #         f.close()
 
 class HPCBin(Bin):
-    def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False) -> None:
+    def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=False) -> None:
         if type(poremodel) == unc.pore_model.PoreModel:
             self.poremodel = poremodel
         else:
@@ -170,16 +170,16 @@ class HPCBin(Bin):
         return ax
     def save_bins(self, fname):
         # save the defining variables
-        pickle.dump((self.nbins, self.poremodel), open(fname, 'wb'))
+        pickle.dump((self.nbins, self.poremodel.to_df()), open(fname, 'wb'))
     @classmethod
     def from_pickle(fname):
         nbins, poremodel  = pickle.load(open(fname, 'rb'))
-        return HPCBin(nbins=nbins, poremodel=poremodel)
+        return HPCBin(nbins=nbins, poremodel=unc.PoreModel(df = poremodel))
     
 
 
 class DeltaBin(Bin):
-    def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=True) -> None:
+    def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=True) -> None:
         if type(poremodel) == unc.pore_model.PoreModel:
             self.mainmodel = poremodel
         else:
@@ -205,7 +205,7 @@ class DeltaBin(Bin):
 
 
 class StayHMMBin(Bin):
-    def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False, p_stay=0.5) -> None:
+    def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=False, p_stay=0.5) -> None:
         super(StayHMMBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
         self.p_stay = p_stay
         self.hmm = self._hmm_stay_model()
@@ -302,7 +302,7 @@ class StayHMMBin(Bin):
 
 
 class DeltaStayHMMBin(DeltaBin):
-    def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False, p_stay=0.5) -> None:
+    def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=False, p_stay=0.5) -> None:
         super(DeltaStayHMMBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
         self.p_stay = p_stay
         self.hmm = self._hmm_stay_model()

@@ -1,8 +1,10 @@
 from sigmoni import utils 
 from sigmoni import run_spumoni as sig
-from sigmoni.Bins import *
+from sigmoni.Bins import HPCBin
 from sigmoni.shred_docs import shred
 from sigmoni.index import build_reference
+import subprocess as proc
+import uncalled as unc
 
 import argparse
 import os, sys
@@ -37,8 +39,8 @@ def parse_arguments():
     # group.add_argument('-n', dest='null_filelist', nargs='+', help='null reference fasta file(s)')
     # Required args
     parser.add_argument('-i', dest='fast5', help='path to input fast5 directory (searches recursively)', required=True)
-    parser.add_argument(('r', "--ref-prefix"), dest="ref_prefix", help="reference output prefix", default='ref', required=True)
-    parser.add_argument(("-b", '--nbins'), dest='nbins', default=6, type=int, help="Number of bins to discretize signal")
+    parser.add_argument('-r', "--ref-prefix", dest="ref_prefix", help="reference output prefix", default='ref', required=True)
+    parser.add_argument("-b", '--nbins', dest='nbins', default=6, type=int, help="Number of bins to discretize signal")
     # ref build args
     # parser.add_argument("--shred", dest='shred_size', default=int(1e5), type=int, help="Size of shredded documents, i.e. resolution of mapping, in bp")
     # parser.add_argument("--no-rev-comp", action="store_false", default=True, dest="rev_comp", help="Do not map reads to the reverse complement of references")
@@ -53,33 +55,29 @@ def parse_arguments():
     return args
 
 def format_args(args):
-    if type(args.pos_filelist) == str:
-        args.pos_filelist = open(args.pos_filelist, 'r').read().splitlines()
-    if type(args.null_filelist) == str:
-        args.null_filelist = open(args.null_filelist, 'r').read().splitlines()
-    args.bins = HPCBin(nbins=args.nbins, poremodel=model_6mer, clip=False)
+    args.output_path = os.path.abspath(args.output_path)
+    args.ref_prefix = os.path.abspath(args.ref_prefix)
+    args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
 
 def main(args):
     '''
     Build the reference index by shredding the input 
     sequences, binning, and building the r-index
     '''
-    # print('Building reference')
-    # build_reference(args)
     print('Querying reads')
     query_reads(args)
 
 def query_reads(args):
-    seq_signal = unc.Fast5Reader(args.fast5)
-    readfile = os.path.join(args.output_path, 'refs', args.ref_prefix + '.fa')
+    seq_signal = unc.Fast5Reader(args.fast5, recursive=True)
+    readfile = os.path.join(args.output_path, args.read_prefix + '.fa')
     if not os.path.exists(readfile):
-        sig.write_read(seq_signal, args.bins, evdt=utils.SIGMAP_EVDT, fname=readfile, reverse=False)
+        sig.write_read_parallel(seq_signal, args.bins, evdt=utils.SIGMAP_EVDT, fname=readfile, threads=args.threads)
     else:
         print('Using binned query found in: %s'%readfile)
 
-    proc.call([args.spumoni_path, 'run', '-t', args.threads, '-r', os.path.join(args.output_path, 'refs', args.ref_prefix), '-p', readfile, '-P', '-n', '-d'])
+    proc.call([args.spumoni_path, 'run', '-t', str(args.threads), '-r', args.ref_prefix, '-p', readfile, '-P', '-n', '-d'])
 
 if __name__ == '__main__':
     args = parse_arguments()
     format_args(args)
-    main()
+    main(args)
