@@ -20,7 +20,7 @@ class Bin:
         self.nbins = nbins
         self.clip = clip
         if clip:
-            self.clipbounds = (self.poremodel['mean'].min(), self.poremodel['mean'].max())
+            self.clipbounds = (self.poremodel['current.mean'].min(), self.poremodel['current.mean'].max())
         if fixed:
             self._get_fixed_bins()
         else:
@@ -134,12 +134,12 @@ class HPCBin(Bin):
         self.nbins = nbins
         self.clip = clip
         if clip:
-            self.clipbounds = (self.poremodel['mean'].min(), self.poremodel['mean'].max())
-        self.minc, self.maxc = self.poremodel['mean'].min(), self.poremodel['mean'].max()  
+            self.clipbounds = (self.poremodel['current.mean'].min(), self.poremodel['current.mean'].max())
+        self.minc, self.maxc = self.poremodel['current.mean'].min(), self.poremodel['current.mean'].max()  
         self.space = (self.maxc - self.minc) / self.nbins
-        self.kmer_to_bin = self.signal_to_binseq(self.poremodel.means)
-        self.binmodel = [(np.mean(self.poremodel.means[np.where(self.kmer_to_bin == idx)[0]]), 
-                                    np.mean(self.poremodel.stdvs[np.where(self.kmer_to_bin == idx)[0]]))
+        self.kmer_to_bin = self.signal_to_binseq(self.poremodel['current.mean'])
+        self.binmodel = [(np.mean(self.poremodel['current.mean'][np.where(self.kmer_to_bin == idx)[0]]), 
+                                    np.mean(self.poremodel['current.stdv'][np.where(self.kmer_to_bin == idx)[0]]))
                                     for idx in range(self.nbins)]
     def _hpc(self, binseq):
         return binseq[np.insert((np.where(np.diff(binseq) != 0)[0] + 1), 0, 0)]
@@ -189,7 +189,7 @@ class DeltaBin(Bin):
         self.bounds = bounds
         self.clip = clip
         if clip:
-            self.clipbounds = (self.poremodel['mean'].min(), self.poremodel['mean'].max())
+            self.clipbounds = (self.poremodel['current.mean'].min(), self.poremodel['current.mean'].max())
         if fixed:
             self._get_fixed_bins()
         else:

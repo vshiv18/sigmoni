@@ -46,7 +46,6 @@ def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size
     docs = []
     # print('converting to signal and binning')
     binseq = bins.bin_sequence(seq, shred_size=shred_size)
-    print(len(binseq))
     # print('converting to character sequence')
     count = 0
     for shred in binseq:
@@ -65,7 +64,7 @@ def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size
         binseq = bins.bin_sequence(seq, revcomp=True, shred_size=shred_size)
         for shred in binseq:
             charseq = int_to_sym(shred)
-            if (count == 1) and terminator:
+            if (count == 0) and terminator:
                 charseq = np.append(charseq, '$')
             outfname = os.path.splitext(fname)[0] + '_%d_rc'%(count) + os.path.splitext(fname)[1]
             with open(outfname, 'w') as f:

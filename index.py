@@ -94,7 +94,7 @@ def _bin_reference(args, files):
     for fname in docs:
         fname = os.path.basename(fname)
         print(fname)
-        rc = True if fname.endswith('_rc.fasta') else False
+        rc = True if fname.endswith('_rc.fasta') or fname.endswith('_rc.fa') else False
         if rc:
             fname = fname.replace('_rc', '')
         sortorder.append((1 if rc else 0,
