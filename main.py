@@ -1,6 +1,6 @@
 from sigmoni import utils 
 from sigmoni import run_spumoni as sig
-from sigmoni.Bins import HPCBin
+from sigmoni.Bins import HPCBin, SigProcHPCBin
 from sigmoni.shred_docs import shred
 from sigmoni.index import build_reference
 import subprocess as proc
@@ -50,6 +50,7 @@ def parse_arguments():
     parser.add_argument("--spumoni-path", dest='spumoni_path', default='spumoni', help="alternate path to spumoni installation (by default uses PATH variable)")
     parser.add_argument("-o", default='./', dest="output_path", help="output path and working directory")
     parser.add_argument("-t", default=1, dest="threads", help="number of threads", type=int)
+    parser.add_argument('--sp', "--sig-proc", action='store_true', dest="sig_proc", default=False, help="process signal to remove long stalls", type=bool)
     parser.add_argument("--read-prefix", dest="read_prefix", help="read output prefix", default='reads')
     # parser.add_argument("--ref-prefix", dest="ref_prefix", help="reference output prefix", default='ref')
     args = parser.parse_args()
@@ -58,7 +59,10 @@ def parse_arguments():
 def format_args(args):
     args.output_path = os.path.abspath(args.output_path)
     args.ref_prefix = os.path.abspath(args.ref_prefix)
-    args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
+    if args.sig_proc:
+        args.bins = SigProcHPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
+    else:
+        args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
 
 def main(args):
     '''

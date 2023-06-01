@@ -176,7 +176,17 @@ class HPCBin(Bin):
         nbins, poremodel  = pickle.load(open(fname, 'rb'))
         return HPCBin(nbins=nbins, poremodel=unc.PoreModel(df = poremodel))
     
-
+class SigProcHPCBin(HPCBin):
+    def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False) -> None:
+        super(SigProcHPCBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
+    def _preprocess(self, signal, evdt=None, normalize=True):
+        if evdt:
+            signal = np.array(evdt.get_means(signal))
+        mask = pd.Series(signal).rolling(25, center=True).std().rolling(25, center=True, min_periods=1).max() > 5
+        signal = signal[mask.to_numpy()]
+        if normalize:   
+            signal, _, _ = normalize_signal(signal, self.poremodel)
+        return signal
 
 class DeltaBin(Bin):
     def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=True) -> None:
