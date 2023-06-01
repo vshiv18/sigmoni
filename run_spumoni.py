@@ -241,14 +241,16 @@ def run_moni(reads, bins, refname = 'ref.fa', readname = 'reads.fa', evdt=None):
     #                 os.path.splitext(readname)[0] + '_to_' + os.path.splitext(rev_ref)[0]])
 
 def parse_ms(fname, names=None, nreads=None):
-    if nreads:
-        read_gen = itertools.islice(SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')), nreads)
-    else:
-        read_gen = SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))
+    read_gen = parse_results(fname, names, nreads)
     if names:
         return {n : np.fromstring(x, dtype=int, sep=' ') for n, (_, x) in zip(open(names, 'r').read().splitlines(), read_gen)}
     return {i : np.fromstring(x, dtype=int, sep=' ') for i, x in read_gen}
-    
+def parse_results(fname, nreads=None):
+    if nreads:
+        return itertools.islice(SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')), nreads)
+    else:
+        return SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))
+
 def compare_ms_docs(real_ms = 'reads', min_pml = 4, max_doc = 8, MS=True):
     suffix = '.lengths' if MS else '.pseudo_lengths'
     realfname = real_ms + suffix

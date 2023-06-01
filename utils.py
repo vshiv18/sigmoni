@@ -18,6 +18,8 @@ def rev_reads(reads):
 
 def normalize_signal(current, poremodel, scale=None, shift=None):
     # takes in a df poremodel, use poremodel.normalize to use poremodel object
+    if len(current) == 0:
+        return current, 0, 0
     if scale and shift:
         return (current * scale) + shift, scale, shift
     # poremodel = poremodel.to_df()

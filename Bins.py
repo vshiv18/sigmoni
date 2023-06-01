@@ -152,6 +152,8 @@ class HPCBin(Bin):
             signal = signal[(signal >= self.clipbounds[0]) & (signal <= self.clipbounds[1])]
         if self.bounds:
             signal = signal[(signal <= self.bounds[0]) | (signal >= self.bounds[1])]
+        if len(signal) == 0:
+            return []
         return self._hpc(self.signal_to_binseq(signal))
     def bin_sequence(self, seq, revcomp=False, shred_size=0):
         kmers = seq_to_kmer(self.poremodel, seq, revcomp=revcomp)
@@ -177,7 +179,7 @@ class HPCBin(Bin):
         return HPCBin(nbins=nbins, poremodel=unc.PoreModel(df = poremodel))
     
 class SigProcHPCBin(HPCBin):
-    def __init__(self, nbins=64, poremodel=unc.PoreModel("r94_dna"), fixed=True, bounds=None, clip=False) -> None:
+    def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=False) -> None:
         super(SigProcHPCBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
     def _preprocess(self, signal, evdt=None, normalize=True):
         if evdt:
