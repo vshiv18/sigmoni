@@ -113,7 +113,7 @@ def model_deltas(poremodel):
 
 _LOWER = "abcdefghijklmnopqrstuvwxyz"
 _UPPER = "ACTGBDEFHIJKLMNOPQRSUVWXYZ"
-_SYMBOLS = "~`!#%^&*()-_=[{]}\|';:\"/?.,<" # no > + or @ because of fasta and fastq
+_SYMBOLS = "~`!#%^&*()-_=[{]}\|';:\"/?.,<$" # no > + or @ because of fasta and fastq
 # _SYMBOLS = "!#$%&'()*,-./:;<=?[\]^_{|}~" # no > + or @ because of fasta and fastq
 _CHARS = _UPPER + _LOWER + _SYMBOLS
 _CHARS = np.array(list(_CHARS))

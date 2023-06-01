@@ -5,6 +5,7 @@ from sigmoni.shred_docs import shred
 from sigmoni.index import build_reference
 import subprocess as proc
 import uncalled as unc
+from uncalled.read_index import ReadIndex
 
 import argparse
 import os, sys
@@ -68,7 +69,7 @@ def main(args):
     query_reads(args)
 
 def query_reads(args):
-    seq_signal = unc.Fast5Reader(args.fast5, recursive=True)
+    seq_signal = ReadIndex(args.fast5, recursive=True)
     readfile = os.path.join(args.output_path, args.read_prefix + '.fa')
     if not os.path.exists(readfile):
         sig.write_read_parallel(seq_signal, args.bins, evdt=utils.SIGMAP_EVDT, fname=readfile, threads=args.threads)

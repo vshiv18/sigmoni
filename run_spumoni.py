@@ -1,7 +1,4 @@
 from sigmoni.utils import *
-
-from scipy.stats import ks_2samp
-
 from matplotlib import pyplot as plt
 import seaborn as sns
 from tqdm.auto import tqdm
@@ -10,7 +7,7 @@ from sklearn.metrics import precision_recall_curve, roc_curve, auc
 from sklearn.metrics import confusion_matrix
 from inspect import signature
 import itertools
-import multiprocess
+import multiprocessing
 
 def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
     if not os.path.isdir(os.path.dirname(fname)):
@@ -98,19 +95,28 @@ def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, normalize=T
                 f.write('>%s\n'%readid)
                 f.write(r[::-1]+'\n')
 
+def bin_read(data):
+    conf_alt = unc.Config()
+    conf_alt.event_detector.window_length1 = 3
+    conf_alt.event_detector.window_length2 = 6
+    conf_alt.event_detector.threshold1 = 4.30265
+    conf_alt.event_detector.threshold2 = 2.57058
+    conf_alt.event_detector.peak_height = 1.0
+    SIGMAP_EVDT = unc.EventDetector(conf_alt.event_detector)
+    read_id, sig, bins, normalize = data
+    binseq = bins.bin_signal(sig, evdt=SIGMAP_EVDT, normalize=normalize)
+    charseq = ''.join(int_to_sym(binseq))
+    return (read_id, charseq)
+    
 def write_read_parallel(sig_gen, bins, evdt, fname='reads.fa', normalize=True, threads=1):
     def signal_gen(sig_gen):
         for s in sig_gen:
-            yield (s.id, s.signal)
-    def bin_read(sig):
-        binseq = bins.bin_signal(sig[1], evdt=evdt, normalize=normalize)
-        charseq = ''.join(int_to_sym(binseq))
-        return (sig[0], charseq)
+            yield (s.id, np.array(s.signal), bins, normalize)
     # normalize to model, event detect, convert to deltas, bin, and write to file
     if threads == 1:
         write_read(sig_gen, bins, evdt, fname=fname, reverse=False, normalize=normalize)
         return
-    pool = multiprocess.Pool(threads)
+    pool = multiprocessing.Pool(threads)
     reads = tqdm(pool.imap_unordered(bin_read, signal_gen(sig_gen), chunksize=1000))
     pool.close()
     null_reads = []
@@ -264,7 +270,7 @@ def compare_ms_docs(real_ms = 'reads', min_pml = 4, max_doc = 8, MS=True):
     
 
 def compare_ms(real_ms = 'reads', null_ms = None, names = None, 
-            metric=lambda x,y: ks_2samp(x,y, alternative='less')[0], MS=True):
+            metric=lambda x,y: x - y, MS=True):
     def compare_ms_forward():
         for read in tqdm(forward.keys()):
             f = forward[read]
@@ -290,7 +296,7 @@ def compare_ms(real_ms = 'reads', null_ms = None, names = None,
 
 
 def get_acc(readA, readB, namesA=None, namesB=None, MS=False,
-            metric=lambda x,y: ks_2samp(x,y, alternative='less')[0]):
+            metric=lambda x,y: x - y):
     null = os.path.splitext(readA)[0] + '_rev' + os.path.splitext(readA)[1]
     ksA, _, _ = compare_ms(real_ms = readA, null_ms = null, names=namesA,
              MS=MS, metric=metric)
@@ -303,7 +309,7 @@ def get_acc(readA, readB, namesA=None, namesB=None, MS=False,
 
 
 def roc(readA, readB, namesA=None, namesB=None, MS=False,
-            metric=lambda x,y: ks_2samp(x,y, alternative='less')[0],
+            metric=lambda x,y: x - y,
             label='', ax=None, plot=True):
     ks, real = get_acc(readA, readB, namesA, namesB, MS=MS, metric=metric)
     fpr, tpr, _ = roc_curve(real, ks)
@@ -335,7 +341,7 @@ def roc(readA, readB, namesA=None, namesB=None, MS=False,
     ax.legend(loc="lower right",fontsize = 8)
 
 def pr_f1(readA, readB, namesA=None, namesB=None, MS=False,
-            metric=lambda x,y: ks_2samp(x,y, alternative='less')[0], confusion=False):
+            metric=lambda x,y: x - y, confusion=False):
     diff, real = get_acc(readA, readB, namesA=namesA, namesB=namesA, MS=MS, metric=metric)
     p, r, threshold = precision_recall_curve(real, diff)
     filt = np.where(p + r != 0)[0]
@@ -368,5 +374,4 @@ def plot_ms(read, real, null, method='kde', MS=True, **kwargs):
     # sns.histplot(reverse, label='null', ax=ax)
     ax.set_xlabel('MS' if MS else 'PML')
     fig.set_dpi(200)
-    print(ks_2samp(forward, reverse, alternative='less'))
     return ax

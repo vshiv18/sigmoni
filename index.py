@@ -32,9 +32,9 @@ def parse_arguments():
     group.add_argument('-pl', dest='pos_filelist', help='list of positive ref fasta files')
     group.add_argument('-p', dest='pos_filelist', nargs='+', help='positive reference fasta file(s)')
     
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-nl', dest='null_filelist', help='list of null ref fasta files')
-    group.add_argument('-n', dest='null_filelist', nargs='+', help='null reference fasta file(s)')
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument('-nl', dest='null_filelist', default=[], help='list of null ref fasta files')
+    group.add_argument('-n', dest='null_filelist', default=[], nargs='+', help='null reference fasta file(s)')
     
     parser.add_argument("-b", '--nbins', dest='nbins', default=6, type=int, help="Number of bins to discretize signal")
     # ref build args
@@ -70,8 +70,11 @@ def build_reference(args):
     # null_docs = _bin_reference(args, null_shreds)
     ###############################################
     pos_docs = _bin_reference(args, args.pos_filelist)
-    null_docs = _bin_reference(args, args.null_filelist)
-    docs = pos_docs + null_docs
+    if args.null_filelist:
+        null_docs = _bin_reference(args, args.null_filelist)
+        docs = pos_docs + null_docs
+    else:
+        docs = pos_docs
     filelist = os.path.join(args.output_path, 'refs', 'filelist.txt')
     with open(filelist,'w') as docarray:
         docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(docs, range(1, len(docs) + 1))])

@@ -35,13 +35,13 @@ class Bin:
         # df has columns kmer, mean, stdv
         if self.bounds:
             minc, maxc = self.bounds
-            curr_range = (model['mean'].max() - maxc) + (minc - model['mean'].min())
+            curr_range = (model['current.mean'].max() - maxc) + (minc - model['current.mean'].min())
             step = curr_range / self.nbins
-            lower = np.arange(model['mean'].min(), minc, step)
-            upper = np.arange(maxc, model['mean'].max(), step)
+            lower = np.arange(model['current.mean'].min(), minc, step)
+            upper = np.arange(maxc, model['current.mean'].max(), step)
             starts = np.concatenate([lower, upper])
         else:
-            minc, maxc = model['mean'].min(), model['mean'].max()  
+            minc, maxc = model['current.mean'].min(), model['current.mean'].max()  
             starts = np.linspace(minc, maxc, self.nbins, endpoint=False)
         self.starts = starts
     
@@ -49,7 +49,7 @@ class Bin:
         k = self.poremodel.K
         model = self.poremodel.to_df().sort_values(by='mean')
         if self.bounds:
-            model = model[(model['mean'] <= self.bounds[0]) | (model['mean'] >= self.bounds[1])]
+            model = model[(model['current.mean'] <= self.bounds[0]) | (model['current.mean'] >= self.bounds[1])]
         kmers_sorted = list(model['kmer'])
         num_kmers = len(kmers_sorted)
         binsize = num_kmers // self.nbins
