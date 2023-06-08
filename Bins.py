@@ -156,8 +156,8 @@ class HPCBin(Bin):
             return []
         return self._hpc(self.signal_to_binseq(signal))
     def bin_sequence(self, seq, revcomp=False, shred_size=0):
-        kmers = seq_to_kmer(self.poremodel, seq, revcomp=revcomp)
         if shred_size > 0:
+            kmers = seq_to_kmer(self.poremodel, seq, revcomp=revcomp)
             shreds = []
             for idx in range(0, len(kmers), shred_size):
                 shred = kmers[idx:idx+shred_size]

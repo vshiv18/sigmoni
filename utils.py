@@ -74,17 +74,16 @@ def seq_to_sig(poremodel, seq):
         return sig
     return np.array([float(poremodel[[seq[x : x + k]]]) for x in range(len(seq) - k + 1)])
 
-def seq_to_kmer(poremodel, seq, revcomp=False):
+def seq_to_kmer(poremodel, seq, revcomp=False, combine=True):
     if os.path.exists(seq):
         idx = unc.index.FastaIndex(poremodel, seq)
         # print('loaded seq index')
-        nt = ''.join([idx.infile.fetch(sid) for sid in idx.infile.references])#.replace('-', '')
-        kmers = model_6mer.str_to_kmers(nt).to_numpy()
-        # remove any non canonical kmers
-        # kmers = kmers[kmers < 4**poremodel.k]
-        if revcomp:
-            kmers = poremodel.kmer_revcomp(kmers)[::-1]
-        return kmers
+        for sid in idx.infile.references:
+            nt = idx.infile.fetch(sid)
+            kmers = model_6mer.str_to_kmers(nt).to_numpy()
+            if revcomp:
+                kmers = poremodel.kmer_revcomp(kmers)[::-1]
+            yield kmers
     return model_6mer.str_to_kmers(seq).to_numpy()
 
 def almost_perfect_reads(seq, poremodel):

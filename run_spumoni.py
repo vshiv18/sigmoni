@@ -29,15 +29,17 @@ def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
         charseq = int_to_sym(binseq)
         if terminator:
             charseq = np.append(charseq, '$')
-        with open(os.path.splitext(fname)[0] + '_rc' + os.path.splitext(fname)[1], 'w') as f:
+        rc_fname = os.path.splitext(fname)[0] + '_rc' + os.path.splitext(fname)[1]
+        with open(rc_fname, 'w') as f:
             if header:
                 f.write('>%s_rc\n'%name)
             f.write(''.join(charseq)+'\n')
+        return [fname, rc_fname]
+    return [fname]
 
 def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size=0, terminator=True):
     if shred_size == 0:
-        write_ref(seq, bins, fname, header=header, revcomp=revcomp, terminator=terminator)
-        return [fname]
+        return write_ref(seq, bins, fname, header=header, revcomp=revcomp, terminator=terminator)
     if not os.path.isdir(os.path.dirname(fname)):
         os.makedirs(os.path.dirname(fname))
     docs = []
@@ -241,16 +243,21 @@ def run_moni(reads, bins, refname = 'ref.fa', readname = 'reads.fa', evdt=None):
     #                 os.path.splitext(readname)[0] + '_to_' + os.path.splitext(rev_ref)[0]])
 
 def parse_ms(fname, names=None, nreads=None):
-    read_gen = parse_results(fname, names, nreads)
+    if nreads:
+        read_gen = itertools.islice(SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')), nreads)
+    else:
+        read_gen = SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))
     if names:
         return {n : np.fromstring(x, dtype=int, sep=' ') for n, (_, x) in zip(open(names, 'r').read().splitlines(), read_gen)}
     return {i : np.fromstring(x, dtype=int, sep=' ') for i, x in read_gen}
 def parse_results(fname, nreads=None):
     if nreads:
-        return itertools.islice(SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')), nreads)
+        read_gen = itertools.islice(SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r')), nreads)
     else:
-        return SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))
-
+        read_gen = SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))
+    for i, x in read_gen:
+        yield i, np.fromstring(x, dtype=int, sep=' ')
+        
 def compare_ms_docs(real_ms = 'reads', min_pml = 4, max_doc = 8, MS=True):
     suffix = '.lengths' if MS else '.pseudo_lengths'
     realfname = real_ms + suffix

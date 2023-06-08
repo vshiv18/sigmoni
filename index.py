@@ -92,6 +92,8 @@ def _bin_reference(args, files):
     for ref in tqdm(files):
         out_fname = os.path.join(outdir, os.path.basename(ref))
         docs += sig.write_shredded_ref(ref, args.bins, out_fname, header=True, revcomp=args.rev_comp, shred_size=args.shred_size)
+    if args.shred_size == 0:
+        return docs
     # docs = [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith('.fasta')]
     sortorder = []
     for fname in docs:
