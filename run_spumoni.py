@@ -13,27 +13,28 @@ def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
     if not os.path.isdir(os.path.dirname(fname)):
         os.makedirs(os.path.dirname(fname))
     # print('converting to signal and binning')
-    binseq = bins.bin_sequence(seq)
-    # print('converting to character sequence')
-    charseq = int_to_sym(binseq)
-    if terminator:
-        charseq = np.append(charseq, '$')
-    name = os.path.splitext(fname)[0]
+    binseqs = bins.bin_sequence(seq)
     with open(fname, 'w') as f:
-        if header:
-            f.write('>%s\n'%name)
-        f.write(''.join(charseq))
+        for sid, binseq in binseqs:
+            # print('converting to character sequence')
+            charseq = int_to_sym(binseq)
+            if terminator:
+                charseq = np.append(charseq, '$')
+            if header:
+                f.write('>%s\n'%sid)
+            f.write(''.join(charseq)+'\n')
     if revcomp:
-        binseq = bins.bin_sequence(seq, revcomp=True)
+        binseqs = bins.bin_sequence(seq, revcomp=True)
         # print('converting to character sequence')
-        charseq = int_to_sym(binseq)
-        if terminator:
-            charseq = np.append(charseq, '$')
         rc_fname = os.path.splitext(fname)[0] + '_rc' + os.path.splitext(fname)[1]
         with open(rc_fname, 'w') as f:
-            if header:
-                f.write('>%s_rc\n'%name)
-            f.write(''.join(charseq)+'\n')
+            for sid, binseq in binseqs:
+                charseq = int_to_sym(binseq)
+                if terminator:
+                    charseq = np.append(charseq, '$')
+                if header:
+                    f.write('>%s_rc\n'%sid)
+                f.write(''.join(charseq)+'\n')
         return [fname, rc_fname]
     return [fname]
 
