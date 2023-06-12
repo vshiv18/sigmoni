@@ -142,7 +142,7 @@ class HPCBin(Bin):
                                     np.mean(self.poremodel['current.stdv'][np.where(self.kmer_to_bin == idx)[0]]))
                                     for idx in range(self.nbins)]
     def _hpc(self, binseq):
-        return binseq[np.insert((np.where(np.diff(binseq) != 0)[0] + 1), 0, 0)]
+        return binseq[np.insert(np.diff(binseq) != 0, 0, True)]
     def signal_to_binseq(self, sig):
         return np.clip(np.floor((sig - self.minc - 1e-10) / self.space), 0, self.nbins - 1).astype(np.uint8)
     def bin_signal(self, signal, evdt=None, normalize=True):
