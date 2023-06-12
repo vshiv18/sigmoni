@@ -60,7 +60,8 @@ class MatchingStatisticsParser():
     def reads(self):
         for r in self.lengths.keys():
             yield r
-
+    def __contains__(self, rid):
+        return rid in self.lengths.keys()
 def get_read_data(r, parser, pointer_to_species, filter=15):
     p = parser.get_pointers(r)
     m = parser.get_lengths(r)
