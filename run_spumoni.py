@@ -14,21 +14,22 @@ def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
         os.makedirs(os.path.dirname(fname))
     # print('converting to signal and binning')
     binseqs = bins.bin_sequence(seq)
-    with open(fname, 'w') as f:
-        for sid, binseq in binseqs:
+    with open(fname, 'wb') as f:
+        for sid, binseq in tqdm(binseqs):
             # print('converting to character sequence')
             charseq = int_to_sym(binseq)
             if terminator:
                 charseq = np.append(charseq, '$')
             if header:
-                f.write('>%s\n'%sid)
-            f.write(''.join(charseq)+'\n')
+                f.write(b'>%s\n'%sid.encode('utf-8'))
+            # f.write(''.join(charseq)+'\n')
+            f.write(charseq.astype('|S1').tostring()+b'\n')
     if revcomp:
         binseqs = bins.bin_sequence(seq, revcomp=True)
         # print('converting to character sequence')
         rc_fname = os.path.splitext(fname)[0] + '_rc' + os.path.splitext(fname)[1]
         with open(rc_fname, 'w') as f:
-            for sid, binseq in binseqs:
+            for sid, binseq in tqdm(binseqs):
                 charseq = int_to_sym(binseq)
                 if terminator:
                     charseq = np.append(charseq, '$')

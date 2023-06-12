@@ -5,6 +5,7 @@ import uncalled as unc
 from tqdm.auto import tqdm
 import os
 import subprocess as proc
+import re
 
 def read_fasta(fname):
     seq = SeqIO.to_dict(SeqIO.parse(fname, "fasta"))
@@ -74,12 +75,13 @@ def seq_to_sig(poremodel, seq):
         return sig
     return np.array([float(poremodel[[seq[x : x + k]]]) for x in range(len(seq) - k + 1)])
 
-def seq_to_kmer(poremodel, seq, revcomp=False, combine=True):
+def seq_to_kmer(poremodel, seq, revcomp=False):
     if os.path.exists(seq):
         idx = unc.index.FastaIndex(poremodel, seq)
         # print('loaded seq index')
         for sid in idx.infile.references:
             nt = idx.infile.fetch(sid)
+            nt = re.sub('[^ACGTacgt]', '', nt)
             kmers = model_6mer.str_to_kmers(nt).to_numpy()
             if revcomp:
                 kmers = poremodel.kmer_revcomp(kmers)[::-1]

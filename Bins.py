@@ -144,7 +144,7 @@ class HPCBin(Bin):
     def _hpc(self, binseq):
         return binseq[np.insert((np.where(np.diff(binseq) != 0)[0] + 1), 0, 0)]
     def signal_to_binseq(self, sig):
-        return np.clip(np.floor((sig - self.minc - 1e-10) / self.space), 0, self.nbins - 1).astype(int)
+        return np.clip(np.floor((sig - self.minc - 1e-10) / self.space), 0, self.nbins - 1).astype(np.uint8)
     def bin_signal(self, signal, evdt=None, normalize=True):
         signal = np.array(signal)
         signal = self._preprocess(signal, evdt=evdt, normalize=normalize)
@@ -159,13 +159,13 @@ class HPCBin(Bin):
         kmers = seq_to_kmer(self.poremodel, seq, revcomp=revcomp)
         if shred_size > 0:
             kmers = np.concatenate([s for _, s in kmers])
-            shreds = []
             for idx in range(0, len(kmers), shred_size):
                 shred = kmers[idx:idx+shred_size]
-                shreds.append(self._hpc(self.kmer_to_bin[shred]))
-            return shreds
+                yield self._hpc(self.kmer_to_bin[shred])
         else:
-            return [(sid, self._hpc(self.kmer_to_bin[seq])) for sid, seq in kmers]
+            print('binning %s'%seq)
+            for sid, seq in kmers:
+                yield (sid, self._hpc(self.kmer_to_bin[seq]))
     def viz_bins(self):
         fig, ax = plt.subplots()
         sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
