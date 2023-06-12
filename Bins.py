@@ -125,7 +125,7 @@ class Bin:
 #         f.close()
 
 class HPCBin(Bin):
-    def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=False) -> None:
+    def __init__(self, nbins=64, poremodel=model_6mer, bounds=None, clip=False) -> None:
         if type(poremodel) == unc.pore_model.PoreModel:
             self.poremodel = poremodel
         else:

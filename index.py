@@ -82,7 +82,7 @@ def build_reference(args):
 
     proc.call([args.spumoni_path, 'build', '-i', filelist, '-o', os.path.join(args.output_path, 'refs', args.ref_prefix), '-P', '-n', '-d', '--no-rev-comp', '-p', '110'])
 
-    args.bins.save_bins(os.path.join(args.output_path, 'refs', 'bins'))
+    args.bins.save_bins(os.path.join(args.output_path, 'refs', 'poremodel.bins'))
 
 def _bin_reference(args, files):
     # can accept either a directory path or a list of files paths
