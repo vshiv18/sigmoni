@@ -146,7 +146,8 @@ class HPCBin(Bin):
     def signal_to_binseq(self, sig):
         return np.clip(np.floor((sig - self.minc - 1e-10) / self.space), 0, self.nbins - 1).astype(np.uint8)
     def bin_signal(self, signal, evdt=None, normalize=True):
-        signal = np.array(signal)
+        if not isinstance(signal, np.ndarray):
+            signal = np.array(signal)
         signal = self._preprocess(signal, evdt=evdt, normalize=normalize)
         if self.clip:
             signal = signal[(signal >= self.clipbounds[0]) & (signal <= self.clipbounds[1])]
@@ -161,7 +162,10 @@ class HPCBin(Bin):
             kmers = np.concatenate([s for _, s in kmers])
             for idx in range(0, len(kmers), shred_size):
                 shred = kmers[idx:idx+shred_size]
-                yield self._hpc(self.kmer_to_bin[shred])
+                if idx + shred_size >= len(kmers):
+                    yield np.append(self._hpc(self.kmer_to_bin[shred]), -1)
+                else:
+                    yield self._hpc(self.kmer_to_bin[shred])
         else:
             print('binning %s'%seq)
             for sid, seq in kmers:
@@ -181,8 +185,8 @@ class HPCBin(Bin):
         return HPCBin(nbins=nbins, poremodel=unc.PoreModel(df = poremodel))
     
 class SigProcHPCBin(HPCBin):
-    def __init__(self, nbins=64, poremodel=model_6mer, fixed=True, bounds=None, clip=False) -> None:
-        super(SigProcHPCBin, self).__init__(nbins=nbins, poremodel=poremodel, fixed=fixed, bounds=bounds, clip=clip)
+    def __init__(self, nbins=64, poremodel=model_6mer, bounds=None, clip=False) -> None:
+        super(SigProcHPCBin, self).__init__(nbins=nbins, poremodel=poremodel, bounds=bounds, clip=clip)
     def _preprocess(self, signal, evdt=None, normalize=True):
         if evdt:
             signal = np.array(evdt.get_means(signal))

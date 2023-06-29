@@ -1,14 +1,16 @@
 from sigmoni import utils 
 from sigmoni import run_spumoni as sig
 from sigmoni.Bins import HPCBin, SigProcHPCBin
-from sigmoni.shred_docs import shred
-from sigmoni.index import build_reference
 import subprocess as proc
 import uncalled as unc
 from uncalled.read_index import ReadIndex
+import numpy as np
+from collections import namedtuple
 
 import argparse
 import os, sys
+
+read = namedtuple('read', ['id', 'signal'])
 
 def parse_arguments():
     '''
@@ -52,6 +54,7 @@ def parse_arguments():
     parser.add_argument("-t", default=1, dest="threads", help="number of threads", type=int)
     parser.add_argument('--sp', "--sig-proc", action='store_true', dest="sig_proc", default=False, help="process signal to remove long stalls")
     parser.add_argument("--read-prefix", dest="read_prefix", help="read output prefix", default='reads')
+    parser.add_argument("--max-chunks", dest="max_chunk", help="max number of chunks", default=0, type=int)
     # parser.add_argument("--ref-prefix", dest="ref_prefix", help="reference output prefix", default='ref')
     args = parser.parse_args()
     return args
@@ -60,6 +63,7 @@ def format_args(args):
     args.output_path = os.path.abspath(args.output_path)
     args.ref_prefix = os.path.abspath(args.ref_prefix)
     if args.sig_proc:
+        print('using signal processing bins')
         args.bins = SigProcHPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
     else:
         args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
@@ -72,8 +76,14 @@ def main(args):
     print('Querying reads')
     query_reads(args)
 
+def signal_generator(args, signal):
+    if args.max_chunk == 0:
+        yield from signal
+    else:
+        for s in signal:
+            yield read(s.id, np.array(s.signal)[:4000*args.max_chunk])
 def query_reads(args):
-    seq_signal = ReadIndex(args.fast5, recursive=True)
+    seq_signal = signal_generator(args, ReadIndex(args.fast5, recursive=True))
     readfile = os.path.join(args.output_path, args.read_prefix + '.fa')
     if not os.path.exists(readfile):
         sig.write_read_parallel(seq_signal, args.bins, evdt=utils.SIGMAP_EVDT, fname=readfile, threads=args.threads)
