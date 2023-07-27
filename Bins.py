@@ -3,8 +3,6 @@ import pandas as pd
 import uncalled as unc
 import seaborn as sns
 from matplotlib import pyplot as plt
-from pomegranate import NormalDistribution, HiddenMarkovModel
-import subprocess as proc
 import pickle
 
 from .utils import *
