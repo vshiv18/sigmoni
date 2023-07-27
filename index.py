@@ -71,11 +71,21 @@ def build_reference(args):
     # null_docs = _bin_reference(args, null_shreds)
     ###############################################
     pos_docs = _bin_reference(args, args.pos_filelist)
+    pos_filelist = os.path.join(args.output_path, 'refs', 'pos_filelist.txt')
     if args.null_filelist:
         null_docs = _bin_reference(args, args.null_filelist)
         docs = pos_docs + null_docs
     else:
         docs = pos_docs
+        
+    with open(pos_filelist,'w') as docarray:
+        pos_docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(pos_docs, range(1, len(pos_docs) + 1))])
+        docarray.write(pos_docs)
+    if args.null_filelist:    
+        null_filelist = os.path.join(args.output_path, 'refs', 'null_filelist.txt')
+        with open(null_filelist,'w') as docarray:
+            null_docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(null_docs, range(len(pos_docs) + 1, len(pos_docs) + len(null_docs) + 2))])
+            docarray.write(null_docs)
     filelist = os.path.join(args.output_path, 'refs', 'filelist.txt')
     with open(filelist,'w') as docarray:
         docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(docs, range(1, len(docs) + 1))])

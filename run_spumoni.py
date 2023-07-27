@@ -182,3 +182,42 @@ class MatchingStatisticsParser():
             yield r
     def __contains__(self, rid):
         return rid in self.lengths.keys()
+    
+# classify reads functions
+
+def count_pmls(r, parser, maxdoc, string=False, read_dict=None):
+    pmls = parser.get_lengths(r)
+    docs = parser.get_docs(r)
+    peaks = np.where(pmls > 0)[0]
+    peaks = peaks[pmls[peaks] >= pmls[peaks - 1]]
+    if (pmls[0] > 1) and peaks[0] != 0:
+        peaks = np.insert(peaks, 0, 0)
+    docs = docs[peaks]
+    pmls = pmls[peaks]
+    if len(pmls) == 0:
+        return None
+    if string:
+        strings = ['' for _ in range(maxdoc)]
+        seq = str(read_dict[r].seq)
+        mems = [str(seq[start : start + l]) for start, l in zip(peaks, pmls)]
+        for m, d in zip(mems, docs):
+            strings[d] += m
+        hist = np.array([utils.delta(s) if s else 0 for s in strings])
+    else:
+        hist = np.bincount(docs, weights=pmls, minlength=maxdoc)
+    return hist
+def spike_test(r, parser, doc_to_species, maxdoc, string=False, read_dict=None):
+    hist = count_pmls(r, parser, maxdoc, string=string, read_dict=read_dict)
+    if doc_to_species[hist.argmax() + 1][0] != 'yeast':
+        return -1
+    first = hist.argmax()
+    sortidx = np.argsort(hist)[::-1]
+    i = 1
+    while i < len(hist) and doc_to_species[sortidx[i] + 1][0] == 'yeast':
+        i += 1
+    second = sortidx[i]
+    return hist[first] / (hist[second] + 1e-10)
+
+def spike_test(r, parser, doc_to_species, maxdoc, string=False, read_dict=None):
+    hist = count_pmls(r, parser, maxdoc, string=string, read_dict=read_dict)
+    return doc_to_species[hist.argmax() + 1]

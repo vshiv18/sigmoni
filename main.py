@@ -55,7 +55,10 @@ def parse_arguments():
     parser.add_argument('--sp', "--sig-proc", action='store_true', dest="sig_proc", default=False, help="process signal to remove long stalls")
     parser.add_argument("--read-prefix", dest="read_prefix", help="read output prefix", default='reads')
     parser.add_argument("--max-chunks", dest="max_chunk", help="max number of chunks", default=0, type=int)
-    # parser.add_argument("--ref-prefix", dest="ref_prefix", help="reference output prefix", default='ref')
+    
+    # classify args
+    parser.add_argument('-t', dest='annotations', help='path to annotation file, if available. Used to tune the spike ratio threshold for binary classification', default=None)
+    
     args = parser.parse_args()
     return args
 
@@ -91,6 +94,9 @@ def query_reads(args):
         print('Using binned query found in: %s'%readfile)
 
     proc.call([args.spumoni_path, 'run', '-t', str(args.threads), '-r', args.ref_prefix, '-p', readfile, '-P', '-n', '-d'])
+
+def classify_reads(args):
+    
 
 if __name__ == '__main__':
     print('Running command: ' + " ".join(sys.argv))
