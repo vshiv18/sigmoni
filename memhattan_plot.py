@@ -62,35 +62,7 @@ class MatchingStatisticsParser():
             yield r
     def __contains__(self, rid):
         return rid in self.lengths.keys()
-def get_read_data(r, parser, pointer_to_species, filter=15):
-    p = parser.get_pointers(r)
-    m = parser.get_lengths(r)
-    read_pos = np.where(m >= filter)[0]
-    if len(read_pos) == 0:
-        return [], None, None#, None, None
-    p = p[m >= filter]
-    m = m[m >= filter]
-    # seq = np.array(read_dict[r].seq)
-    # mems = [''.join(seq[start : start + l]) for start, l in zip(read_pos, m)]
-    # weight = np.array(list(map(func, mems)))
-    docs = np.array(list(map(pointer_to_species, p)))
-    return (p, m, docs)
-
-def get_all_read_data(r, parser, func, read_dict, pointer_to_species, filter=15):
-    p = parser.get_pointers(r)
-    m = parser.get_lengths(r)
-    read_pos = np.where(m >= filter)[0]
-    if len(read_pos) == 0:
-        return [], None, None#, None, None
-    p = p[m >= filter]
-    m = m[m >= filter]
-    seq = np.array(read_dict[r].seq)
-    mems = [''.join(seq[start : start + l]) for start, l in zip(read_pos, m)]
-    weight = np.array(list(map(func, mems)))
-    docs = np.array(list(map(pointer_to_species, p)))
-    return (p, m, mems, weight, docs)
-
-
+    
 
 class ResultsVisualizer():
     def __init__(self, ref_path, unc_path=None, sigmap_path=None, mm_path=None, genomes_path=None):
