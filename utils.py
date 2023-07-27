@@ -2,7 +2,6 @@ from Bio import SeqIO
 import numpy as np
 import pandas as pd
 import uncalled as unc
-from tqdm.auto import tqdm
 import os
 import subprocess as proc
 import re
@@ -59,21 +58,8 @@ def iterative_normalize_signal(current, bins, poremodel, scale=None, shift=None,
 
     
 def seq_to_sig(poremodel, seq):
-    k = poremodel.K
-    if os.path.exists(seq):
-        if not os.path.exists(seq + '.pac'):
-            proc.call(['uncalled', 'index', seq, '--no-bwt'])
-        idx = unc.load_index(poremodel.K, seq, load_bwt=False)
-        print('loaded seq index')
-        kmers = np.concatenate([idx.get_kmers(sid, 0, length) 
-                        for sid, length in idx.get_seqs()])
-        print('got kmers')
-        # remove any non canonical kmers
-        kmers = kmers[kmers < 4**k]
-        sig = poremodel[kmers]
-        print('built expected signal')
-        return sig
-    return np.array([float(poremodel[[seq[x : x + k]]]) for x in range(len(seq) - k + 1)])
+    for _, kmer in seq_to_kmer(poremodel, seq):
+        yield np.array(poremodel[kmer])
 
 def seq_to_kmer(poremodel, seq, revcomp=False):
     if os.path.exists(seq):
@@ -86,7 +72,7 @@ def seq_to_kmer(poremodel, seq, revcomp=False):
             if revcomp:
                 kmers = poremodel.kmer_revcomp(kmers)[::-1]
             yield sid, kmers
-    return model_6mer.str_to_kmers(seq).to_numpy()
+    yield None, model_6mer.str_to_kmers(seq).to_numpy()
 
 def almost_perfect_reads(seq, poremodel):
     k = poremodel.K
@@ -96,10 +82,6 @@ def almost_perfect_reads(seq, poremodel):
         sig.append(point)
     sig = np.array(sig)
     return sig
-
-def sig_to_delta(signal):
-    # signal is a np array
-    return np.diff(signal)
 
 def model_deltas(poremodel):
     # takes in a poremodel, and returns a new model k + 1 of the deltas
