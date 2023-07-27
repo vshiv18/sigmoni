@@ -1,10 +1,14 @@
-from sigmoni.utils import *
+import sigmoni.utils as utils
 from tqdm.auto import tqdm
 from sklearn.metrics import precision_recall_curve, roc_curve, auc
 from sklearn.metrics import confusion_matrix
 from inspect import signature
 import itertools
 import multiprocessing
+import os
+import numpy as np
+from Bio import SeqIO
+import uncalled as unc
 
 def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
     if not os.path.isdir(os.path.dirname(fname)):
@@ -14,7 +18,7 @@ def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
     with open(fname, 'wb') as f:
         for sid, binseq in tqdm(binseqs):
             # print('converting to character sequence')
-            charseq = int_to_sym(binseq)
+            charseq = utils.int_to_sym(binseq)
             if terminator:
                 charseq = np.append(charseq, '$')
             if header:
@@ -27,7 +31,7 @@ def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
         rc_fname = os.path.splitext(fname)[0] + '_rc' + os.path.splitext(fname)[1]
         with open(rc_fname, 'wb') as f:
             for sid, binseq in tqdm(binseqs):
-                charseq = int_to_sym(binseq)
+                charseq = utils.int_to_sym(binseq)
                 if terminator:
                     charseq = np.append(charseq, '$')
                 if header:
@@ -47,7 +51,7 @@ def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size
     # print('converting to character sequence')
     count = 0
     for shred in binseq:
-        charseq = int_to_sym(shred)
+        charseq = utils.int_to_sym(shred)
         # if (count == len(binseq) - 1) and terminator:
         #     charseq = np.append(charseq, '$')
         outfname = os.path.splitext(fname)[0] + '_%d'%(count) + os.path.splitext(fname)[1]
@@ -61,7 +65,7 @@ def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size
         count -= 1
         binseq = bins.bin_sequence(seq, revcomp=True, shred_size=shred_size)
         for shred in binseq:
-            charseq = int_to_sym(shred)
+            charseq = utils.int_to_sym(shred)
             # if (count == 0) and terminator:
             #     charseq = np.append(charseq, '$')
             outfname = os.path.splitext(fname)[0] + '_%d_rc'%(count) + os.path.splitext(fname)[1]
@@ -82,7 +86,7 @@ def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, normalize=T
         if len(binseq) == 0:
             null_reads.append(sig.id)
         else:
-            charseq = ''.join(int_to_sym(binseq))
+            charseq = ''.join(utils.int_to_sym(binseq))
             reads.append((sig.id, charseq))
     with open(fname, 'w') as f:
         for readid, r in reads:
@@ -106,7 +110,7 @@ def bin_read(data):
     SIGMAP_EVDT = unc.EventDetector(conf_alt.event_detector)
     read_id, sig, bins, normalize = data
     binseq = bins.bin_signal(sig, evdt=SIGMAP_EVDT, normalize=normalize)
-    charseq = ''.join(int_to_sym(binseq))
+    charseq = ''.join(utils.int_to_sym(binseq))
     return (read_id, charseq)
     
 def write_read_parallel(sig_gen, bins, evdt, fname='reads.fa', normalize=True, threads=1):
@@ -147,3 +151,34 @@ def parse_results(fname, nreads=None):
         read_gen = SeqIO.FastaIO.FastaTwoLineParser(open(fname,'r'))
     for i, x in read_gen:
         yield i, np.fromstring(x, dtype=int, sep=' ')
+           
+def parse_fasta(fname):
+    with open(fname,'r') as f:
+        return {i : x for i, x in SeqIO.FastaIO.FastaTwoLineParser(f)}
+
+class MatchingStatisticsParser():
+    def __init__(self, output_path, MS=True, docs=False):
+        self.MS = MS
+        self.doc_exists = docs
+        self.path = output_path
+        self.parse_inputs()
+    def parse_inputs(self):
+        suffix = '.lengths' if self.MS else '.pseudo_lengths'
+        self.lengths = parse_ms(self.path + suffix)
+        if self.MS:
+            self.pointers = parse_ms(self.path + '.pointers')
+        if self.doc_exists:
+            self.docs = parse_ms(self.path + '.doc_numbers')
+    def get_lengths(self, r):
+        return self.lengths[r]
+    def get_docs(self, r):
+        assert self.doc_exists, 'no document array'
+        return self.docs[r]
+    def get_pointers(self, r):
+        assert self.MS, 'pointers unavailable for PMLs'
+        return self.pointers[r]
+    def reads(self):
+        for r in self.lengths.keys():
+            yield r
+    def __contains__(self, rid):
+        return rid in self.lengths.keys()

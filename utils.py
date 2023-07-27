@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import uncalled as unc
 import os
+from scipy.stats import entropy
 import subprocess as proc
 import re
 
@@ -135,3 +136,22 @@ SIGMAP_EVDT = unc.EventDetector(conf_alt.event_detector)
 # model_6mer = unc.PoreModel(df = model_6mer)
 
 model_6mer = unc.PoreModel(os.path.join(os.path.dirname(__file__),'poremodel/template_median68pA.model'))
+
+# complexity functions
+
+def calc_entropy(s):
+    counts = np.array([s.count(c) for c in set(s)])
+    counts = counts / counts.sum()
+    return entropy(counts)        
+def calc_rel_entropy(s, min_cardinality=None):
+    counts = np.array([s.count(c) for c in set(s)])
+    if min_cardinality and len(counts) < min_cardinality:
+        counts = np.concatenate([counts, np.zeros(min_cardinality - len(counts))])
+    counts = counts / counts.sum()
+    return entropy(counts, np.ones(len(counts)) / len(counts))      
+def delta(seq):
+    if seq == '':
+        return 0
+    def cardinality(seq, k):
+        return len(set([seq[i:i + k] for i in range(len(seq) - k + 1)]))
+    return np.max([cardinality(seq, k) / k for k in range(1, len(seq) + 1)])
