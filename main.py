@@ -93,6 +93,7 @@ def query_reads(args):
     proc.call([args.spumoni_path, 'run', '-t', str(args.threads), '-r', args.ref_prefix, '-p', readfile, '-P', '-n', '-d'])
 
 if __name__ == '__main__':
+    print('Running command: ' + " ".join(sys.argv))
     args = parse_arguments()
     format_args(args)
     main(args)

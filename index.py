@@ -40,6 +40,7 @@ def parse_arguments():
     # ref build args
     parser.add_argument("--shred", dest='shred_size', default=int(1e5), type=int, help="Size of shredded documents, i.e. resolution of mapping, in bp. Choose 0 for no shredding")
     parser.add_argument("--no-rev-comp", action="store_false", default=True, dest="rev_comp", help="Do not map reads to the reverse complement of references")
+    parser.add_argument("--no-build", action="store_true", default=False, dest="no_build", help="Do not build spumoni reference, just bin reference sequences")
 
     # options args
     parser.add_argument("--spumoni-path", dest='spumoni_path', default='spumoni', help="alternate path to spumoni installation (by default uses PATH variable)")
@@ -79,10 +80,10 @@ def build_reference(args):
     with open(filelist,'w') as docarray:
         docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(docs, range(1, len(docs) + 1))])
         docarray.write(docs)
-
-    proc.call([args.spumoni_path, 'build', '-i', filelist, '-o', os.path.join(args.output_path, 'refs', args.ref_prefix), '-P', '-n', '-d', '--no-rev-comp', '-p', '110'])
-
     args.bins.save_bins(os.path.join(args.output_path, 'refs', 'poremodel.bins'))
+    if args.no_build:
+        sys.exit(0)
+    proc.call([args.spumoni_path, 'build', '-i', filelist, '-o', os.path.join(args.output_path, 'refs', args.ref_prefix), '-P', '-n', '-d', '--no-rev-comp', '-p', '110'])
 
 def _bin_reference(args, files):
     # can accept either a directory path or a list of files paths
