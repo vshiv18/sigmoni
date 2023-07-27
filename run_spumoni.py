@@ -28,14 +28,14 @@ def write_ref(seq, bins, fname, header=False, revcomp=False, terminator=True):
         binseqs = bins.bin_sequence(seq, revcomp=True)
         # print('converting to character sequence')
         rc_fname = os.path.splitext(fname)[0] + '_rc' + os.path.splitext(fname)[1]
-        with open(rc_fname, 'w') as f:
+        with open(rc_fname, 'wb') as f:
             for sid, binseq in tqdm(binseqs):
                 charseq = int_to_sym(binseq)
                 if terminator:
                     charseq = np.append(charseq, '$')
                 if header:
-                    f.write('>%s_rc\n'%sid)
-                f.write(''.join(charseq)+'\n')
+                    f.write(b'>%s_rc\n'%sid.encode('utf-8'))
+                f.write(charseq.astype('|S1').tostring()+b'\n')
         return [fname, rc_fname]
     return [fname]
 
@@ -54,10 +54,10 @@ def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size
         # if (count == len(binseq) - 1) and terminator:
         #     charseq = np.append(charseq, '$')
         outfname = os.path.splitext(fname)[0] + '_%d'%(count) + os.path.splitext(fname)[1]
-        with open(outfname, 'w') as f:
+        with open(outfname, 'wb') as f:
             if header:
-                f.write('>%s\n'%(os.path.splitext(outfname)[0]))
-            f.write(''.join(charseq))
+                f.write(b'>%s\n'%os.path.splitext(outfname)[0].encode('utf-8'))
+            f.write(charseq.astype('|S1').tostring()+b'\n')
         docs.append(outfname)
         count += 1
     if revcomp:
@@ -68,10 +68,10 @@ def write_shredded_ref(seq, bins, fname, header=False, revcomp=False, shred_size
             # if (count == 0) and terminator:
             #     charseq = np.append(charseq, '$')
             outfname = os.path.splitext(fname)[0] + '_%d_rc'%(count) + os.path.splitext(fname)[1]
-            with open(outfname, 'w') as f:
+            with open(outfname, 'wb') as f:
                 if header:
-                    f.write('>%s\n'%(os.path.splitext(outfname)[0]))
-                f.write(''.join(charseq))
+                    f.write(b'>%s_rc\n'%os.path.splitext(outfname)[0].encode('utf-8'))
+                f.write(charseq.astype('|S1').tostring()+b'\n')
             docs.append(outfname)
             count -= 1
     return docs
