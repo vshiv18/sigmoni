@@ -79,13 +79,13 @@ def build_reference(args):
         docs = pos_docs
         
     with open(pos_filelist,'w') as docarray:
-        pos_docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(pos_docs, range(1, len(pos_docs) + 1))])
-        docarray.write(pos_docs)
+        pos_docs_str = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(pos_docs, range(1, len(pos_docs) + 1))])
+        docarray.write(pos_docs_str)
     if args.null_filelist:    
         null_filelist = os.path.join(args.output_path, 'refs', 'null_filelist.txt')
         with open(null_filelist,'w') as docarray:
-            null_docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(null_docs, range(len(pos_docs) + 1, len(pos_docs) + len(null_docs) + 2))])
-            docarray.write(null_docs)
+            null_docs_str = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(null_docs, range(len(pos_docs) + 1, len(pos_docs) + len(null_docs) + 1))])
+            docarray.write(null_docs_str)
     filelist = os.path.join(args.output_path, 'refs', 'filelist.txt')
     with open(filelist,'w') as docarray:
         docs = '\n'.join(['%s %d'%(r, idx) for r, idx in zip(docs, range(1, len(docs) + 1))])

@@ -73,7 +73,8 @@ def seq_to_kmer(poremodel, seq, revcomp=False):
             if revcomp:
                 kmers = poremodel.kmer_revcomp(kmers)[::-1]
             yield sid, kmers
-    yield None, model_6mer.str_to_kmers(seq).to_numpy()
+    else:
+        return None, model_6mer.str_to_kmers(seq).to_numpy()
 
 def almost_perfect_reads(seq, poremodel):
     k = poremodel.K

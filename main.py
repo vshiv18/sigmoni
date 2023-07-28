@@ -6,9 +6,10 @@ import uncalled as unc
 from uncalled.read_index import ReadIndex
 import numpy as np
 from collections import namedtuple
-
+from Bio import SeqIO
 import argparse
 import os, sys
+from sklearn.metrics import precision_recall_curve
 
 read = namedtuple('read', ['id', 'signal'])
 
@@ -57,8 +58,10 @@ def parse_arguments():
     parser.add_argument("--max-chunks", dest="max_chunk", help="max number of chunks", default=0, type=int)
     
     # classify args
-    parser.add_argument('-t', dest='annotations', help='path to annotation file, if available. Used to tune the spike ratio threshold for binary classification', default=None)
-    
+    parser.add_argument('-a', dest='annotations', help='path to annotation file, if available. Used to tune the spike ratio threshold for binary classification', default=None)
+    parser.add_argument('--thresh', dest='threshold', help='PML ratio threshold (can be tuned by running with -t true annotations, ignored if annotations provided)', default=1.0, type=float)
+    parser.add_argument('--multi', dest='multi', action='store_true', help='run multiclass classification (default = binary)', default=False)
+    parser.add_argument('--complexity', dest='complexity', action='store_true', help='run sequence complexity (delta) correction (default = False)', default=False)
     args = parser.parse_args()
     return args
 
@@ -70,7 +73,8 @@ def format_args(args):
         args.bins = SigProcHPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
     else:
         args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
-
+    if args.annotations:
+        args.annotations = {line.split()[0] : line.split()[1] for line in open(args.annotations, 'r').read().splitlines()}
 def main(args):
     '''
     Build the reference index by shredding the input 
@@ -78,7 +82,8 @@ def main(args):
     '''
     print('Querying reads')
     query_reads(args)
-
+    classify_reads(args)
+    
 def signal_generator(args, signal):
     if args.max_chunk == 0:
         yield from signal
@@ -95,9 +100,58 @@ def query_reads(args):
 
     proc.call([args.spumoni_path, 'run', '-t', str(args.threads), '-r', args.ref_prefix, '-p', readfile, '-P', '-n', '-d'])
 
-def classify_reads(args):
-    
+def _path_to_species(fname):
+    fname = os.path.basename(fname)
+    rc = True if fname.endswith('_rc.fasta') or fname.endswith('_rc.fa') else False
+    if rc:
+        fname = fname.replace('_rc.fasta', '.fasta')
+    return ('_'.join(os.path.splitext(fname)[0].split('_')[:-1]) ,  int(os.path.splitext(fname)[0].split('_')[-1]), rc)
 
+def _multi_classify(args, parser, doc_to_species, read_dict=None):
+    maxdoc = max(doc_to_species.keys())
+    preds = {}
+    for r in parser.reads():
+        preds[r] = sig.best_shred(r, parser, doc_to_species, maxdoc, string=args.complexity, read_dict=read_dict)
+    write_classifications(preds)
+def _binary_classify(args, parser, doc_to_species, read_dict=None):
+    maxdoc = max(doc_to_species.keys())
+    ratios = [sig.spike_test(r, parser, doc_to_species, maxdoc, string=args.complexity, read_dict=read_dict) for r in parser.reads()]
+    if args.annotations:
+        p, r, threshold = precision_recall_curve([args.annotations[r] for r in parser.reads()], ratios)
+        filt = np.where(p + r != 0)[0]
+        p = p[filt]
+        r = r[filt]
+        f1s = 2 * (p * r) / (p + r)
+        best = f1s.argmax()
+        thresh = threshold[f1s.argmax()]
+        print('Precision, Recall, F1: ', p[best], r[best], f1s[best])
+        print('Threshold: ', thresh)
+    else:
+        preds = {r : 'pos_class' if ratios[r] >= args.threshold else 'neg_class' for r in parser.reads()}
+        write_classifications(preds)
+def classify_reads(args):
+    # parse index structures to find classes
+    if args.multi:
+        path = os.path.join(os.path.dirname(args.ref_prefix), 'filelist.txt')
+        doc_to_species = {int(x.split()[1]) : _path_to_species(x.split()[0])[0] for x in open(path, 'r').read().splitlines()}
+    else:
+        pos_path = os.path.join(os.path.dirname(args.ref_prefix), 'pos_filelist.txt')
+        doc_to_species = {int(x.split()[1]) : 'pos_class' for x in open(pos_path, 'r').read().splitlines()}
+        null_path = os.path.join(os.path.dirname(args.ref_prefix), 'null_filelist.txt')
+        doc_to_species = doc_to_species | {int(x.split()[1]) : 'neg_class' for x in open(null_path, 'r').read().splitlines()}
+    
+    read_dict = None if not args.complexity else SeqIO.to_dict(SeqIO.parse(os.path.join(args.output_path, args.read_prefix + '.fa'), 'fasta'))
+    parser = sig.MatchingStatisticsParser(os.path.join(args.output_path, args.read_prefix + '.fa'), docs=True, MS=False)
+    if args.multi:
+        _multi_classify(args, parser, doc_to_species, read_dict=read_dict)
+    else:
+        _binary_classify(args, parser, doc_to_species, read_dict=read_dict)
+    
+def write_classifications(preds):
+    with open(os.path.join(args.output_path, args.read_prefix + '.report'), 'w') as out:
+        out.write('read_id\tclass\n')
+        for r, p in preds.items():
+            out.write('%s\t%s\n'%(r, p))
 if __name__ == '__main__':
     print('Running command: ' + " ".join(sys.argv))
     args = parse_arguments()
