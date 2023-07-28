@@ -31,7 +31,7 @@ Once the index is built, you can classify reads in a few modes:
 python /path/to/sigmoni/main.py -i /path/to/fast5s/ -r /path/to/index -o ./output_dir -t 48 --multi --complexity --sp
 ```
 
-The above command runs multi-class classification with 48 threads, with sequence complexity correction (recommended for complex genomes, e.g. eukaryotic genomes). **Sequence complexity correction may be slower without compiling the optional Rust library**. We also recommend the `--sp` flag, which filters out possible sequencing stalls prior to classification.
+The above command runs multi-class classification with 48 threads, with sequence complexity correction (recommended for complex genomes, e.g. eukaryotic genomes). **NOTE: Sequence complexity correction may be slower without compiling the optional Rust library**. We also recommend the `--sp` flag, which filters out possible sequencing stalls prior to classification.
 
 The output is a `*.report` file, which lists the classification for each read, depending on classification mode. The `*.pseudo_lengths` lists the PML profile for each read (see SPUMONI for more details).
 
