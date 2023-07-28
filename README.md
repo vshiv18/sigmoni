@@ -2,14 +2,14 @@
 
 Sigmoni is a software tool for rapid read classification directly from raw Nanopore signal, using compressed indexing and matching statistics.
 
-Sigmoni extends a previous tool [SPUMONI] (https://github.com/oma219/spumoni/), which implements the _r_-index, a BWT-based index that scales sublinearly for highly repetitive texts (like a complex genome or pangenome).
+Sigmoni extends a previous tool [SPUMONI](https://github.com/oma219/spumoni/), which implements the _r_-index, a BWT-based index that scales sublinearly for highly repetitive texts (like a complex genome or pangenome).
 
 Sigmoni implements an ultra-fast signal quantization procedure, which projects the read signal and reference into a discrete alphebet space to perform exact matching.
 
 ## Getting Started
 To use Sigmoni, simply clone this Github repo. Optionally, you may compile provided Rust code for certain functions used in Sigmoni, which significantly improves efficiency. However, python versions are included for compatibility. (**TODO** include Rust compilation instructions)
 
-Sigmoni used SPUMONI and [Uncalled4] (https://github.com/skovaka/UNCALLED/tree/uncalled4) as dependencies, to perform _r_-index exact matching operations and Nanopore signal processing, respectively. See the respective Github pages for installation instructions. We recommend installing SPUMONI from source and Uncalled4 using pip.
+Sigmoni used SPUMONI and [Uncalled4](https://github.com/skovaka/UNCALLED/tree/uncalled4) as dependencies, to perform _r_-index exact matching operations and Nanopore signal processing, respectively. See the respective Github pages for installation instructions. We recommend installing SPUMONI from source and Uncalled4 using pip.
 
 ## Step 1: Building an Index
 
