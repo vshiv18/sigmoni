@@ -2,9 +2,10 @@ from Bio import SeqIO
 import numpy as np
 import pandas as pd
 import uncalled as unc
-from tqdm.auto import tqdm
 import os
+from scipy.stats import entropy
 import subprocess as proc
+import re
 
 def read_fasta(fname):
     seq = SeqIO.to_dict(SeqIO.parse(fname, "fasta"))
@@ -18,11 +19,15 @@ def rev_reads(reads):
 
 def normalize_signal(current, poremodel, scale=None, shift=None):
     # takes in a df poremodel, use poremodel.normalize to use poremodel object
+    if len(current) == 0:
+        return current, 0, 0
     if scale and shift:
         return (current * scale) + shift, scale, shift
-    poremodel = poremodel.to_df()
-    mean = np.mean(poremodel['mean'])
-    std = np.std(poremodel['mean'])
+    # poremodel = poremodel.to_df()
+    # mean = np.mean(poremodel['mean'])
+    # std = np.std(poremodel['mean'])
+    mean = poremodel.model_mean
+    std = poremodel.model_stdv
     scale = std / np.std(current)
     shift = mean - scale * np.mean(current)
     scaled = (current * scale) + shift
@@ -54,21 +59,22 @@ def iterative_normalize_signal(current, bins, poremodel, scale=None, shift=None,
 
     
 def seq_to_sig(poremodel, seq):
-    k = poremodel.K
+    for _, kmer in seq_to_kmer(poremodel, seq):
+        yield np.array(poremodel[kmer])
+
+def seq_to_kmer(poremodel, seq, revcomp=False):
     if os.path.exists(seq):
-        if not os.path.exists(seq + '.pac'):
-            proc.call(['uncalled', 'index', seq, '--no-bwt'])
-        idx = unc.load_index(poremodel.K, seq, load_bwt=False)
-        print('loaded seq index')
-        kmers = np.concatenate([idx.get_kmers(sid, 0, length) 
-                        for sid, length in idx.get_seqs()])
-        print('got kmers')
-        # remove any non canonical kmers
-        kmers = kmers[kmers < 4**k]
-        sig = poremodel[kmers]
-        print('built expected signal')
-        return sig
-    return np.array([float(poremodel[[seq[x : x + k]]]) for x in range(len(seq) - k + 1)])
+        idx = unc.index.FastaIndex(poremodel, seq)
+        # print('loaded seq index')
+        for sid in idx.infile.references:
+            nt = idx.infile.fetch(sid)
+            nt = re.sub('[^ACGTacgt]', '', nt)
+            kmers = model_6mer.str_to_kmers(nt).to_numpy()
+            if revcomp:
+                kmers = poremodel.kmer_revcomp(kmers)[::-1]
+            yield sid, kmers
+    else:
+        return None, model_6mer.str_to_kmers(seq).to_numpy()
 
 def almost_perfect_reads(seq, poremodel):
     k = poremodel.K
@@ -78,10 +84,6 @@ def almost_perfect_reads(seq, poremodel):
         sig.append(point)
     sig = np.array(sig)
     return sig
-
-def sig_to_delta(signal):
-    # signal is a np array
-    return np.diff(signal)
 
 def model_deltas(poremodel):
     # takes in a poremodel, and returns a new model k + 1 of the deltas
@@ -98,12 +100,18 @@ def model_deltas(poremodel):
 
 _LOWER = "abcdefghijklmnopqrstuvwxyz"
 _UPPER = "ACTGBDEFHIJKLMNOPQRSUVWXYZ"
-_SYMBOLS = "~`!#$%^&*()-_=[{]}\|';:\"/?.,<" # no > + or @ because of fasta and fastq
+_SYMBOLS = "~`!#%^&*()-_=[{]}\|';:\"/?.,<$" # no > + or @ because of fasta and fastq
 # _SYMBOLS = "!#$%&'()*,-./:;<=?[\]^_{|}~" # no > + or @ because of fasta and fastq
 _CHARS = _UPPER + _LOWER + _SYMBOLS
+_CHARS = np.array(list(_CHARS))
 def int_to_sym(seq):
-    if max(seq) < len(_CHARS):
-        return [_CHARS[s] for s in seq]
+    # if max(seq) < len(_CHARS):
+    #     return [_CHARS[s] for s in seq]
+    try:
+        return _CHARS[seq]
+    except IndexError:
+        raise IndexError('Number of bins must be < %d'%(len(_CHARS)))
+
 def int_to_alpha(seq):
     if max(seq) < len(_UPPER):
         return [_UPPER[s] for s in seq]
@@ -124,6 +132,27 @@ conf_alt.event_detector.threshold2 = 2.57058
 conf_alt.event_detector.peak_height = 1.0
 SIGMAP_EVDT = unc.EventDetector(conf_alt.event_detector)
 
-model_6mer = pd.read_csv(os.path.join(os.path.dirname(__file__),'poremodel/template_median68pA.model'), 
-             sep='\t').loc[:,['kmer','level_mean','level_stdv']].rename(columns={'level_mean':'mean','level_stdv':'stdv'})
-model_6mer = unc.PoreModel(df = model_6mer)
+# model_6mer = pd.read_csv(os.path.join(os.path.dirname(__file__),'poremodel/template_median68pA.model'), 
+#              sep='\t').loc[:,['kmer','level_mean','level_stdv']].rename(columns={'level_mean':'mean','level_stdv':'stdv'})
+# model_6mer = unc.PoreModel(df = model_6mer)
+
+model_6mer = unc.PoreModel(os.path.join(os.path.dirname(__file__),'poremodel/template_median68pA.model'))
+
+# complexity functions
+
+def calc_entropy(s):
+    counts = np.array([s.count(c) for c in set(s)])
+    counts = counts / counts.sum()
+    return entropy(counts)        
+def calc_rel_entropy(s, min_cardinality=None):
+    counts = np.array([s.count(c) for c in set(s)])
+    if min_cardinality and len(counts) < min_cardinality:
+        counts = np.concatenate([counts, np.zeros(min_cardinality - len(counts))])
+    counts = counts / counts.sum()
+    return entropy(counts, np.ones(len(counts)) / len(counts))      
+def delta(seq):
+    if seq == '':
+        return 0
+    def cardinality(seq, k):
+        return len(set([seq[i:i + k] for i in range(len(seq) - k + 1)]))
+    return np.max([cardinality(seq, k) / k for k in range(1, len(seq) + 1)])
