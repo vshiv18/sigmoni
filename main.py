@@ -57,6 +57,7 @@ def parse_arguments():
     parser.add_argument("--read-prefix", dest="read_prefix", help="read output prefix", default='reads')
     parser.add_argument("--max-chunks", dest="max_chunk", help="max number of chunks", default=0, type=int)
     
+    parser.add_argument("--no-classify", action="store_true", default=False, dest="no_classify", help="Skip classification step, just binning signal and computing pseudomatching lengths")
     # classify args
     parser.add_argument('-a', dest='annotations', help='path to annotation file, if available. Used to tune the spike ratio threshold for binary classification', default=None)
     parser.add_argument('--thresh', dest='threshold', help='PML ratio threshold (can be tuned by running with -t true annotations, ignored if annotations provided)', default=1.0, type=float)
@@ -82,7 +83,8 @@ def main(args):
     '''
     print('Querying reads')
     query_reads(args)
-    classify_reads(args)
+    if not args.no_classify:
+        classify_reads(args)
     
 def signal_generator(args, signal):
     if args.max_chunk == 0:
