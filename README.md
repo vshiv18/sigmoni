@@ -11,7 +11,15 @@ To use Sigmoni, simply clone this Github repo. Optionally, you may compile provi
 
 Sigmoni used SPUMONI and [Uncalled4](https://github.com/skovaka/UNCALLED/tree/uncalled4) as dependencies, to perform _r_-index exact matching operations and Nanopore signal processing, respectively. See the respective Github pages for installation instructions. We recommend installing SPUMONI from source and Uncalled4 using pip.
 
-Other python dependencies: Biopython, sklearn, pandas, numpy, tqdm, 
+Other python dependencies: Biopython, sklearn, pandas, numpy, tqdm. Some may be installed with Uncalled4.
+
+The provided environment file, along with installing Uncalled will create a conda environment to run Sigmoni:
+
+```
+conda env create -f environment.yml
+conda activate sigmoni
+pip install git+https://github.com/skovaka/UNCALLED.git@uncalled4
+```
 
 ## Step 1: Building an Index
 

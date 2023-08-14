@@ -1,4 +1,4 @@
-import sigmoni.utils as utils
+from . import utils
 from tqdm.auto import tqdm
 import itertools
 import multiprocessing
