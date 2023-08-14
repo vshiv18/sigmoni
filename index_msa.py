@@ -1,12 +1,9 @@
 from sigmoni import utils 
-from sigmoni import run_spumoni as sig
 from sigmoni.Bins import HPCBin
-from sigmoni.shred_docs import shred
 import subprocess as proc
-import uncalled as unc
 import argparse
 from tqdm.auto import tqdm
-import os, sys
+import os
 from Bio import AlignIO
 import numpy as np
 

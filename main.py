@@ -1,8 +1,7 @@
-from . import utils 
-from . import run_spumoni as sig
-from .Bins import HPCBin, SigProcHPCBin
+from sigmoni import utils 
+from sigmoni import run_spumoni as sig
+from sigmoni.Bins import HPCBin, SigProcHPCBin
 import subprocess as proc
-import uncalled as unc
 from uncalled.read_index import ReadIndex
 import numpy as np
 from collections import namedtuple

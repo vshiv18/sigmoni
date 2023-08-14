@@ -1,6 +1,6 @@
-from . import utils 
-from . import run_spumoni as sig
-from .Bins import HPCBin
+from sigmoni import utils 
+from sigmoni import run_spumoni as sig
+from sigmoni.Bins import HPCBin
 import subprocess as proc
 import uncalled as unc
 import argparse
