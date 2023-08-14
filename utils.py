@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import uncalled as unc
 import os
-from scipy.stats import entropy
+# from scipy.stats import entropy
 import subprocess as proc
 import re
 
@@ -140,16 +140,16 @@ model_6mer = unc.PoreModel(os.path.join(os.path.dirname(__file__),'poremodel/tem
 
 # complexity functions
 
-def calc_entropy(s):
-    counts = np.array([s.count(c) for c in set(s)])
-    counts = counts / counts.sum()
-    return entropy(counts)        
-def calc_rel_entropy(s, min_cardinality=None):
-    counts = np.array([s.count(c) for c in set(s)])
-    if min_cardinality and len(counts) < min_cardinality:
-        counts = np.concatenate([counts, np.zeros(min_cardinality - len(counts))])
-    counts = counts / counts.sum()
-    return entropy(counts, np.ones(len(counts)) / len(counts))  
+# def calc_entropy(s):
+#     counts = np.array([s.count(c) for c in set(s)])
+#     counts = counts / counts.sum()
+#     return entropy(counts)        
+# def calc_rel_entropy(s, min_cardinality=None):
+#     counts = np.array([s.count(c) for c in set(s)])
+#     if min_cardinality and len(counts) < min_cardinality:
+#         counts = np.concatenate([counts, np.zeros(min_cardinality - len(counts))])
+#     counts = counts / counts.sum()
+#     return entropy(counts, np.ones(len(counts)) / len(counts))  
 
 try:
     from sigmoni.delta_rust import delta as delta

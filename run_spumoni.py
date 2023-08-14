@@ -1,8 +1,5 @@
 import sigmoni.utils as utils
 from tqdm.auto import tqdm
-from sklearn.metrics import precision_recall_curve, roc_curve, auc
-from sklearn.metrics import confusion_matrix
-from inspect import signature
 import itertools
 import multiprocessing
 import os
