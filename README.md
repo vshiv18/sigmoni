@@ -11,6 +11,8 @@ To use Sigmoni, simply clone this Github repo. Optionally, you may compile provi
 
 Sigmoni used SPUMONI and [Uncalled4](https://github.com/skovaka/UNCALLED/tree/uncalled4) as dependencies, to perform _r_-index exact matching operations and Nanopore signal processing, respectively. See the respective Github pages for installation instructions. We recommend installing SPUMONI from source and Uncalled4 using pip.
 
+Other python dependencies: 
+
 ## Step 1: Building an Index
 
 The first step in read classification is building an index over the reference. Currently to perform binary classification, an example of the positive and null databases must be provided (which represent the two classes for binary classification). If only a positive reference is included, only multi-class classification is possible. These can be provided as lists of FASTA files. You should also choose the "shred" size, which dictates the location resolution of mapping (default is 100kbp). Decreasing shred size will increase overall index size, but provide finer grain locality information.

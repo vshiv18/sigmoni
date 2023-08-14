@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import uncalled as unc
-import seaborn as sns
-from matplotlib import pyplot as plt
+# import seaborn as sns
+# from matplotlib import pyplot as plt
 import pickle
 
 from .utils import *
@@ -53,12 +53,12 @@ class Bin:
         binsize = num_kmers // self.nbins
         self.starts = np.array([float(self.poremodel[[kmers_sorted[idx]]]) for idx in range(0, num_kmers, binsize)])
 
-    def viz_bins(self):
-        fig, ax = plt.subplots()
-        sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
-        for s in self.starts:
-            ax.axvline(s)
-        return ax
+    # def viz_bins(self):
+    #     fig, ax = plt.subplots()
+    #     sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
+    #     for s in self.starts:
+    #         ax.axvline(s)
+    #     return ax
 
     def _preprocess(self, signal, evdt=None, normalize=True):
         if evdt:
@@ -129,12 +129,12 @@ class HPCBin(Bin):
             print('binning %s'%seq)
             for sid, seq in kmers:
                 yield (sid, self._hpc(self.kmer_to_bin[seq]))
-    def viz_bins(self):
-        fig, ax = plt.subplots()
-        sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
-        for idx in range(1, self.nbins):
-            ax.axvline(self.minc + (idx * self.space))
-        return ax
+    # def viz_bins(self):
+    #     fig, ax = plt.subplots()
+    #     sns.histplot(self.poremodel.to_df()['mean'], ax=ax, bins=50)
+    #     for idx in range(1, self.nbins):
+    #         ax.axvline(self.minc + (idx * self.space))
+    #     return ax
     def save_bins(self, fname):
         # save the defining variables
         pickle.dump((self.nbins, self.poremodel.to_df()), open(fname, 'wb'))
