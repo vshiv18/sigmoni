@@ -10,6 +10,7 @@ from Bio import SeqIO
 import argparse
 import os, sys
 from sklearn.metrics import precision_recall_curve
+from tqdm.auto import tqdm
 
 read = namedtuple('read', ['id', 'signal'])
 
@@ -58,6 +59,7 @@ def parse_arguments():
     parser.add_argument("--max-chunks", dest="max_chunk", help="max number of chunks", default=0, type=int)
     
     parser.add_argument("--no-classify", action="store_true", default=False, dest="no_classify", help="Skip classification step, just binning signal and computing pseudomatching lengths")
+    parser.add_argument("--reclassify", action="store_true", default=False, dest="reclassify", help="Reclassify reads after exact matching step (potentially with new threshold)")
     # classify args
     parser.add_argument('-a', dest='annotations', help='path to annotation file, if available. Used to tune the spike ratio threshold for binary classification', default=None)
     parser.add_argument('--thresh', dest='threshold', help='PML ratio threshold (can be tuned by running with -t true annotations, ignored if annotations provided)', default=1.0, type=float)
@@ -75,15 +77,20 @@ def format_args(args):
     else:
         args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
     if args.annotations:
-        args.annotations = {line.split()[0] : line.split()[1] for line in open(args.annotations, 'r').read().splitlines()}
+        args.annotations = {line.split()[0] : 1 if line.split()[1] == 'pos_class' else 0 for line in open(args.annotations, 'r').read().splitlines()}
 def main(args):
     '''
     Build the reference index by shredding the input 
     sequences, binning, and building the r-index
     '''
+    if args.reclassify:
+        print('Classifying reads')
+        classify_reads(args)
+        return
     print('Querying reads')
     query_reads(args)
     if not args.no_classify:
+        print('Classifying reads')
         classify_reads(args)
     
 def signal_generator(args, signal):
@@ -114,12 +121,12 @@ def _multi_classify(args, parser, doc_to_species, read_dict=None):
     preds = {}
     for r in parser.reads():
         preds[r] = sig.best_shred(r, parser, doc_to_species, maxdoc, string=args.complexity, read_dict=read_dict)
-    write_classifications(preds)
+    write_classifications(preds, '_multi')
 def _binary_classify(args, parser, doc_to_species, read_dict=None):
     maxdoc = max(doc_to_species.keys())
-    ratios = [sig.spike_test(r, parser, doc_to_species, maxdoc, string=args.complexity, read_dict=read_dict) for r in parser.reads()]
+    ratios = {r : sig.spike_test(r, parser, doc_to_species, maxdoc, string=args.complexity, read_dict=read_dict) for r in tqdm(parser.reads())}
     if args.annotations:
-        p, r, threshold = precision_recall_curve([args.annotations[r] for r in parser.reads()], ratios)
+        p, r, threshold = precision_recall_curve([args.annotations[r] for r in parser.reads()], [ratios[r] for r in parser.reads()])
         filt = np.where(p + r != 0)[0]
         p = p[filt]
         r = r[filt]
@@ -130,7 +137,7 @@ def _binary_classify(args, parser, doc_to_species, read_dict=None):
         print('Threshold: ', thresh)
     else:
         preds = {r : 'pos_class' if ratios[r] >= args.threshold else 'neg_class' for r in parser.reads()}
-        write_classifications(preds)
+        write_classifications(preds, '_binary')
 def classify_reads(args):
     # parse index structures to find classes
     if args.multi:
@@ -149,8 +156,8 @@ def classify_reads(args):
     else:
         _binary_classify(args, parser, doc_to_species, read_dict=read_dict)
     
-def write_classifications(preds):
-    with open(os.path.join(args.output_path, args.read_prefix + '.report'), 'w') as out:
+def write_classifications(preds, suffix):
+    with open(os.path.join(args.output_path, args.read_prefix + suffix + '.report'), 'w') as out:
         out.write('read_id\tclass\n')
         for r, p in preds.items():
             out.write('%s\t%s\n'%(r, p))

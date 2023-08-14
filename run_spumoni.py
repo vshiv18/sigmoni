@@ -208,12 +208,12 @@ def count_pmls(r, parser, maxdoc, string=False, read_dict=None):
     return hist
 def spike_test(r, parser, doc_to_species, maxdoc, string=False, read_dict=None):
     hist = count_pmls(r, parser, maxdoc, string=string, read_dict=read_dict)
-    if doc_to_species[hist.argmax() + 1][0] != 'pos_class':
+    if doc_to_species[hist.argmax() + 1] != 'pos_class':
         return -1
     first = hist.argmax()
     sortidx = np.argsort(hist)[::-1]
     i = 1
-    while i < len(hist) and doc_to_species[sortidx[i] + 1][0] == 'pos_class':
+    while i < len(hist) and doc_to_species[sortidx[i] + 1] == 'pos_class':
         i += 1
     second = sortidx[i]
     return (hist[first] + 1e-10) / hist[second]

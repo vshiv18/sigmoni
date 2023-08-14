@@ -149,10 +149,21 @@ def calc_rel_entropy(s, min_cardinality=None):
     if min_cardinality and len(counts) < min_cardinality:
         counts = np.concatenate([counts, np.zeros(min_cardinality - len(counts))])
     counts = counts / counts.sum()
-    return entropy(counts, np.ones(len(counts)) / len(counts))      
-def delta(seq):
-    if seq == '':
-        return 0
-    def cardinality(seq, k):
-        return len(set([seq[i:i + k] for i in range(len(seq) - k + 1)]))
-    return np.max([cardinality(seq, k) / k for k in range(1, len(seq) + 1)])
+    return entropy(counts, np.ones(len(counts)) / len(counts))  
+
+try:
+    from sigmoni.delta_rust import delta as delta
+    print('using Rust delta implementation')    
+except ImportError:
+    try:
+        from sigmoni.delta import delta_fast as delta
+        print('using C++ delta implementation')
+    except ImportError:
+        def delta(seq):
+            if seq == '':
+                return 0
+            def cardinality(seq, k):
+                return len(set([seq[i:i + k] for i in range(len(seq) - k + 1)]))
+            return np.max([cardinality(seq, k) / k for k in range(1, len(seq) + 1)])
+        print('using python delta implementation')
+
