@@ -7,7 +7,15 @@ Sigmoni extends a previous tool [SPUMONI](https://github.com/oma219/spumoni/), w
 Sigmoni implements an ultra-fast signal quantization procedure, which projects the read signal and reference into a discrete alphebet space to perform exact matching.
 
 ## Getting Started
-To use Sigmoni, simply clone this Github repo. Optionally, you may compile provided Rust code for certain functions used in Sigmoni, which significantly improves efficiency. However, python versions are included for compatibility. (**TODO** include Rust compilation instructions)
+To use Sigmoni, simply clone this Github repo. 
+
+Optionally, you may compile provided Rust code for certain functions used in Sigmoni, which significantly improves efficiency. However, python versions are included for compatibility. To compile the rust functions using cargo:
+```
+cd src/delta_rust
+cargo build --release
+mv target/release/libdelta_rust.so ../../delta_rust.so
+
+```
 
 Sigmoni used SPUMONI and [Uncalled4](https://github.com/skovaka/UNCALLED/tree/uncalled4) as dependencies, to perform _r_-index exact matching operations and Nanopore signal processing, respectively. See the respective Github pages for installation instructions. We recommend installing SPUMONI from source and Uncalled4 using pip.
 

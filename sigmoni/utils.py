@@ -152,7 +152,7 @@ model_6mer = unc.PoreModel(os.path.join(os.path.dirname(__file__),'poremodel/tem
 #     return entropy(counts, np.ones(len(counts)) / len(counts))  
 
 try:
-    from sigmoni.delta_rust import delta as delta
+    from delta_rust import delta as delta
     print('using Rust delta implementation')    
 except ImportError:
     try:
