@@ -64,7 +64,7 @@ tar -xzvf zymo.tar.gz
 bash pull_data.sh
 bash sigmoni_zymo.sh
 ```
-If SPUMONI is not in your path, point Sigmoni to the binary using `--spumoni-path`. This will create a `refs` directory, which will contain the SPUMONI reference and shredded/binned reference files. In the `example` directory, a `reads_binary.report` and `reads_multi.report` will contain the binary and multi-class classification results. In this example, yeast is the positive class. You may also examine the PMLs in `reads.fa.pseudo_lengths` and the binned query reads in `reads.fa`.
+If SPUMONI is not in your path, point Sigmoni to the binary using `--spumoni-path`. This will create a `refs` directory, which will contain the SPUMONI reference and shredded/binned reference files. In the `example` directory, `reads_binary.report` and `reads_multi.report` will contain the binary and multi-class classification results. In this example, yeast is the positive class. You may also examine the PMLs in `reads.fa.pseudo_lengths` and the binned query reads in `reads.fa`.
 
 ## Getting Help
 
