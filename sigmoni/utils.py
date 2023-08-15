@@ -136,7 +136,7 @@ SIGMAP_EVDT = unc.EventDetector(conf_alt.event_detector)
 #              sep='\t').loc[:,['kmer','level_mean','level_stdv']].rename(columns={'level_mean':'mean','level_stdv':'stdv'})
 # model_6mer = unc.PoreModel(df = model_6mer)
 
-model_6mer = unc.PoreModel(os.path.join(os.path.dirname(__file__),'poremodel/template_median68pA.model'))
+model_6mer = unc.PoreModel(os.path.join(os.path.dirname(__file__),'../poremodel/template_median68pA.model'))
 
 # complexity functions
 

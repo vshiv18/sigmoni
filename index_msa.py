@@ -1,4 +1,4 @@
-from sigmoni import utils 
+from sigmoni.sigmoni import utils 
 from sigmoni.Bins import HPCBin
 import subprocess as proc
 import argparse

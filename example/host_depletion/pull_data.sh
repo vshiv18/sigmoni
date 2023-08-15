@@ -19,4 +19,6 @@ mv D6322.refseq/Genomes/*_complete_genome.fasta ./
 rm -rf D6322.refseq*
 wget -O - https://hgdownload.soe.ucsc.edu/goldenPath/sacCer3/bigZips/sacCer3.fa.gz | gunzip > saccer3.fasta
 
-cd ../../
+# combined refs for comparison
+cd ..
+for f in pos_class/*.fasta neg_class/*.fasta; do (cat "${f}"; echo) >> combined_zymo_chm13.fasta; done
