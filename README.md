@@ -25,6 +25,7 @@ The provided environment file, along with installing Uncalled will create a cond
 
 ```
 conda env create -f environment.yml
+# alternatively: conda create -n sigmoni python=3.9 numpy pandas scikit-learn Biopython tqdm pip
 conda activate sigmoni
 pip install git+https://github.com/skovaka/UNCALLED.git@uncalled4
 ```
