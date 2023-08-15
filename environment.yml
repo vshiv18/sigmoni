@@ -3,7 +3,7 @@ dependencies:
   - python=3.9
   - numpy
   - pandas
-  - anaconda::scikit-learn
-  - conda-forge::Biopython
-  - conda-forge::tqdm
+  - scikit-learn
+  - Biopython
+  - tqdm
   - pip

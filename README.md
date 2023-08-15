@@ -14,7 +14,6 @@ Optionally, you may compile provided Rust code for certain functions used in Sig
 cd src/delta_rust
 cargo build --release
 mv target/release/libdelta_rust.so ../../delta_rust.so
-
 ```
 
 Sigmoni used SPUMONI and [Uncalled4](https://github.com/skovaka/UNCALLED/tree/uncalled4) as dependencies, to perform _r_-index exact matching operations and Nanopore signal processing, respectively. See the respective Github pages for installation instructions. We recommend installing SPUMONI from source and Uncalled4 using pip.
@@ -53,6 +52,19 @@ python /path/to/sigmoni/main.py -i /path/to/fast5s/ -r /path/to/index -o ./outpu
 The above command runs multi-class classification with 48 threads, with sequence complexity correction (recommended for complex genomes, e.g. eukaryotic genomes). **NOTE: Sequence complexity correction may be slower without compiling the optional Rust library**. We also recommend the `--sp` flag, which filters out possible sequencing stalls prior to classification.
 
 The output is a `*.report` file, which lists the classification for each read, depending on classification mode. The `*.pseudo_lengths` lists the PML profile for each read (see SPUMONI for more details).
+
+## Example data
+
+As an example, we have provided bash scripts to recreate the results in Table 1 (mock community) of the paper.
+
+Download the fast5 signal data from [here](https://livejohnshopkins-my.sharepoint.com/:f:/g/personal/vshivak1_jh_edu/Ekz-z_mFGP1NqC-dlwFN58wB4feWOSvzzJmjx39N3_KSnw) to the example directory. Then run the following to run the Sigmoni pipeline:
+```
+cd example
+tar -xzvf zymo.tar.gz
+bash pull_data.sh
+bash sigmoni_zymo.sh
+```
+If SPUMONI is not in your path, point Sigmoni to the binary using `--spumoni-path`. This will create a `refs` directory, which will contain the SPUMONI reference and shredded/binned reference files. In the `example` directory, a `reads_binary.report` and `reads_multi.report` will contain the binary and multi-class classification results. In this example, yeast is the positive class. You may also examine the PMLs in `reads.fa.pseudo_lengths` and the binned query reads in `reads.fa`.
 
 ## Getting Help
 
