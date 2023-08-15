@@ -85,5 +85,7 @@ Preprint in preparation.
 [1] Ahmed, O. Y., Rossi, M., Gagie, T., Boucher, C., & Langmead, B. (2023). SPUMONI 2: improved classification using a pangenome index of minimizer digests. Genome Biology, 24(1), 122.
 
 FAST5 data
+
 [2] M. Jain, S. Koren, K. H. Miga, J. Quick, A. C. Rand, T. A. Sasani, J. R. Tyson, A. D. Beggs, A. T. Dilthey, I. T. Fiddes, et al., “Nanopore sequencing and assembly of a human genome with ultra-long reads,” Nat Biotechnol, vol. 36, no. 4, pp. 338–345, Apr. 2018.
+
 [3] S. Kovaka, Y. Fan, B. Ni, W. Timp, and M. C. Schatz, “Targeted nanopore sequencing by real-time mapping of raw electrical signal with UNCALLED,” Nat Biotechnol, vol. 39, no. 4, pp. 431–441, Apr. 2021.
