@@ -55,16 +55,18 @@ The output is a `*.report` file, which lists the classification for each read, d
 
 ## Example data
 
-As an example, we have provided bash scripts to recreate the results in Table 1 (mock community) of the paper.
+As an example, we have provided bash scripts to recreate the results in Table 1 of the paper.
 
-Download the fast5 signal data from [here](https://livejohnshopkins-my.sharepoint.com/:f:/g/personal/vshivak1_jh_edu/Ekz-z_mFGP1NqC-dlwFN58wB4feWOSvzzJmjx39N3_KSnw) to the example directory. Then run the following to run the Sigmoni pipeline:
+Download the fast5 signal data from [here](https://livejohnshopkins-my.sharepoint.com/:f:/g/personal/vshivak1_jh_edu/Ekz-z_mFGP1NqC-dlwFN58wB4feWOSvzzJmjx39N3_KSnw) to the example directory. Then run the following to run the Sigmoni pipeline (for mock community):
 ```
-cd example
+cd example/zymo
 tar -xzvf zymo.tar.gz
 bash pull_data.sh
 bash sigmoni_zymo.sh
 ```
 If SPUMONI is not in your path, point Sigmoni to the binary using `--spumoni-path`. This will create a `refs` directory, which will contain the SPUMONI reference and shredded/binned reference files. In the `example` directory, `reads_binary.report` and `reads_multi.report` will contain the binary and multi-class classification results. In this example, yeast is the positive class. You may also examine the PMLs in `reads.fa.pseudo_lengths` and the binned query reads in `reads.fa`.
+
+We also provide similar scripts to recreate the results of the host depletion experiment.
 
 ## Getting Help
 
