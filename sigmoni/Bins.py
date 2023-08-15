@@ -5,10 +5,10 @@ import uncalled as unc
 # from matplotlib import pyplot as plt
 import pickle
 
-from .utils import *
+from . import utils
 
 class Bin:
-    def __init__(self, nbins=64, poremodel=model_6mer, 
+    def __init__(self, nbins=64, poremodel=utils.model_6mer, 
                 fixed=True, bounds=None, clip=True) -> None:
         if type(poremodel) == unc.pore_model.PoreModel:
             self.poremodel = poremodel
@@ -64,7 +64,7 @@ class Bin:
         if evdt:
             signal = np.array(evdt.get_means(signal))
         if normalize:   
-            signal, _, _ = normalize_signal(signal, self.poremodel)
+            signal, _, _ = utils.normalize_signal(signal, self.poremodel)
         return signal
     def bin_signal(self, signal, evdt=None, normalize=True):
         signal = np.array(signal)
@@ -77,14 +77,14 @@ class Bin:
         return np.searchsorted(self.starts, signal)
 
     def bin_sequence(self, seq):
-        sig = seq_to_sig(self.poremodel, seq)
+        sig = utils.seq_to_sig(self.poremodel, seq)
         if self.bounds:
             sig = sig[(sig <= self.bounds[0]) | (sig >= self.bounds[1])]
         
         return np.searchsorted(self.starts, sig)
 
 class HPCBin(Bin):
-    def __init__(self, nbins=64, poremodel=model_6mer, bounds=None, clip=False) -> None:
+    def __init__(self, nbins=64, poremodel=utils.model_6mer, bounds=None, clip=False) -> None:
         if type(poremodel) == unc.pore_model.PoreModel:
             self.poremodel = poremodel
         else:
@@ -116,7 +116,7 @@ class HPCBin(Bin):
             return []
         return self._hpc(self.signal_to_binseq(signal))
     def bin_sequence(self, seq, revcomp=False, shred_size=0):
-        kmers = seq_to_kmer(self.poremodel, seq, revcomp=revcomp)
+        kmers = utils.seq_to_kmer(self.poremodel, seq, revcomp=revcomp)
         if shred_size > 0:
             kmers = np.concatenate([s for _, s in kmers])
             for idx in range(0, len(kmers), shred_size):
@@ -144,7 +144,7 @@ class HPCBin(Bin):
         return HPCBin(nbins=nbins, poremodel=unc.PoreModel(df = poremodel))
     
 class SigProcHPCBin(HPCBin):
-    def __init__(self, nbins=64, poremodel=model_6mer, bounds=None, clip=False) -> None:
+    def __init__(self, nbins=64, poremodel=utils.model_6mer, bounds=None, clip=False) -> None:
         super(SigProcHPCBin, self).__init__(nbins=nbins, poremodel=poremodel, bounds=bounds, clip=clip)
     def _preprocess(self, signal, evdt=None, normalize=True):
         if evdt:
@@ -152,5 +152,5 @@ class SigProcHPCBin(HPCBin):
         mask = pd.Series(signal).rolling(25, center=True).std().rolling(25, center=True, min_periods=1).max() > 5
         signal = signal[mask.to_numpy()]
         if normalize:   
-            signal, _, _ = normalize_signal(signal, self.poremodel)
+            signal, _, _ = utils.normalize_signal(signal, self.poremodel)
         return signal

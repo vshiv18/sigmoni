@@ -1,5 +1,5 @@
-from sigmoni.sigmoni import utils 
-from sigmoni.sigmoni import run_spumoni as sig
+from sigmoni import utils 
+from sigmoni import run_spumoni as sig
 from sigmoni.Bins import HPCBin
 import subprocess as proc
 import argparse

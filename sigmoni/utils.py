@@ -4,7 +4,6 @@ import pandas as pd
 import uncalled as unc
 import os
 # from scipy.stats import entropy
-import subprocess as proc
 import re
 
 def read_fasta(fname):
