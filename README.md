@@ -78,7 +78,7 @@ If you run into any issues or have any questions, please feel free to reach out 
 
 ## Citing Sigmoni
 
-Preprint in preparation.
+Preprint: [https://www.biorxiv.org/content/10.1101/2023.08.15.553308v1.full.pdf+html](https://www.biorxiv.org/content/10.1101/2023.08.15.553308v1)
 
 ## References
 
