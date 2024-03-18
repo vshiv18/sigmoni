@@ -20,6 +20,7 @@ def parse_arguments():
 
     # options args
     parser.add_argument("-o", default='./', dest="output_path", help="output path and working directory")
+    parser.add_argument("--no-filelist", action="store_true", dest="filelist", default=True, help="output sorted filelist")
     parser.add_argument("--ref-prefix", dest="ref_prefix", help="reference output prefix")
     args = parser.parse_args()
     return args
@@ -30,12 +31,12 @@ def format_args(args):
     args.output_path = os.path.abspath(args.output_path)
 
 def shred(args, files):
-    # dir = '/scratch4/blangme2/vshiv/yeast_v_bacteria/refs/individual_genomes/'
-    os.makedirs(os.path.join(args.output_path, 'refs/shredded_docs'), exist_ok=True)
-    outdir = os.path.join(args.output_path, 'refs/shredded_docs')
+    os.makedirs(os.path.join(args.output_path, 'shredded_docs'), exist_ok=True)
+    outdir = os.path.join(args.output_path, 'shredded_docs')
     shreds = []
+    # import pdb; pdb.set_trace()
     for fname in files:
-        if not fname.endswith('.fasta'):
+        if not fname.endswith('.fasta') and not fname.endswith('.fa') and not fname.endswith('.fna'):
             continue
         # path = os.path.join(dir, fname)
         seq = ''.join([str(x.seq) for x in SeqIO.parse(fname, 'fasta')])
@@ -46,8 +47,8 @@ def shred(args, files):
             # print(os.path.join(outdir, os.path.splitext(fname)[0] + '_%d.fasta'%count))
             with open(os.path.join(outdir, os.path.splitext(fname)[0] + '_%d.fasta'%count), 'w') as out:
                 out.write('>%s_%d\n%s'%(os.path.splitext(fname)[0], count, seq[idx:idx+args.shred_size]))
-            count += 1
             shreds.append(os.path.join(outdir, os.path.splitext(fname)[0] + '_%d.fasta'%count))
+            count += 1
         # if args.rev_comp:
         #     rc = revcomp(seq)
         #     for idx in range(0, len(rc), args.shred_size):
@@ -60,4 +61,7 @@ def shred(args, files):
 if __name__ == '__main__':
     args = parse_arguments()
     format_args(args)
-    shred(args, args.filelist)
+    shreds = shred(args, args.filelist)
+    if args.filelist:
+        with open(os.path.join(args.output_path, 'shredded_docs/filelist.txt'), 'w') as file:
+            file.write('\n'.join(shreds))

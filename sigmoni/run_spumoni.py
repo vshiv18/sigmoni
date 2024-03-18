@@ -78,7 +78,7 @@ def write_read(sig_gen, bins, evdt, fname='reads.fa', reverse=False, normalize=T
     # normalize to model, event detect, convert to deltas, bin, and write to file
     reads = []
     null_reads = []
-    for sig in tqdm(sig_gen):
+    for sig in sig_gen:
         binseq = bins.bin_signal(sig.signal, evdt=evdt, normalize=normalize)
         if len(binseq) == 0:
             null_reads.append(sig.id)
